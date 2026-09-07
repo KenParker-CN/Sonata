@@ -25,9 +25,9 @@ interface ScrollPositions {
 }
 
 // Wrapper component that provides navigation context to pages
-function PageWrapper({ children, onFilesSelected, handleNavigate, onMainRef, sidebarOpen, onSidebarClose }: { 
+function PageWrapper({ children, onImportMusic, handleNavigate, onMainRef, sidebarOpen, onSidebarClose }: {
   children: React.ReactNode
-  onFilesSelected?: (files: File[]) => void
+  onImportMusic?: () => void
   handleNavigate: (path: string) => void
   onMainRef?: (ref: HTMLElement | null) => void
   sidebarOpen?: boolean
@@ -57,7 +57,7 @@ function PageWrapper({ children, onFilesSelected, handleNavigate, onMainRef, sid
     <>
       <Sidebar 
         onNavigate={handleNavigate} 
-        onFilesSelected={onFilesSelected}
+        onImportMusic={onImportMusic}
         isOpen={sidebarOpen}
         onClose={onSidebarClose}
       />
@@ -74,8 +74,12 @@ function App() {
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [nowPlayingOpen, setNowPlayingOpen] = useState(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
   const tracksRef = useRef(tracks)
-  tracksRef.current = tracks
+
+  useEffect(() => {
+    tracksRef.current = tracks
+  }, [tracks])
 
   // Global import manager - persists across route changes
   const handleTracksParsed = useCallback((newTracks: Track[]) => {
@@ -139,6 +143,18 @@ function App() {
       await importFiles(uniqueFiles)
     }
   }, [tracks, importFiles])
+
+  const handleImportMusic = useCallback(() => {
+    importInputRef.current?.click()
+  }, [])
+
+  const handleImportInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      void handleFilesSelected(Array.from(files))
+    }
+    event.target.value = ''
+  }, [handleFilesSelected])
 
   const handleCreatePlaylist = useCallback((name: string) => {
     const newPlaylist: Playlist = {
@@ -282,6 +298,15 @@ function App() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Global import progress toast */}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="audio/*"
+        multiple
+        {...({ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+        onChange={handleImportInputChange}
+        className="hidden"
+      />
       <ImportProgressToast progress={progress} />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -296,7 +321,7 @@ function App() {
         <Routes>
           <Route path="/library" element={
             <PageWrapper 
-              onFilesSelected={handleFilesSelected} 
+              onImportMusic={handleImportMusic} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -311,6 +336,7 @@ function App() {
                 onGoToAlbum={handleGoToAlbum}
                 onGoToArtist={handleGoToArtist}
                 onRemoveFromLibrary={handleRemoveFromLibrary}
+                onImportMusic={handleImportMusic}
                 onOpenSidebar={() => setSidebarOpen(true)}
               />
             </PageWrapper>
@@ -318,7 +344,7 @@ function App() {
           
           <Route path="/artists" element={
             <PageWrapper 
-              onFilesSelected={handleFilesSelected} 
+              onImportMusic={handleImportMusic} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -336,7 +362,7 @@ function App() {
           
           <Route path="/artists/:artistName" element={
             <PageWrapper 
-              onFilesSelected={handleFilesSelected} 
+              onImportMusic={handleImportMusic} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -358,7 +384,7 @@ function App() {
           
           <Route path="/albums" element={
             <PageWrapper 
-              onFilesSelected={handleFilesSelected} 
+              onImportMusic={handleImportMusic} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -377,7 +403,7 @@ function App() {
           
           <Route path="/albums/:albumArtist/:albumName" element={
             <PageWrapper 
-              onFilesSelected={handleFilesSelected} 
+              onImportMusic={handleImportMusic} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -394,7 +420,7 @@ function App() {
           
           <Route path="/playlists" element={
             <PageWrapper 
-              onFilesSelected={handleFilesSelected} 
+              onImportMusic={handleImportMusic} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -415,7 +441,7 @@ function App() {
           {/* Default route redirects to library */}
           <Route path="/" element={
             <PageWrapper 
-              onFilesSelected={handleFilesSelected} 
+              onImportMusic={handleImportMusic} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -430,6 +456,7 @@ function App() {
                 onGoToAlbum={handleGoToAlbum}
                 onGoToArtist={handleGoToArtist}
                 onRemoveFromLibrary={handleRemoveFromLibrary}
+                onImportMusic={handleImportMusic}
                 onOpenSidebar={() => setSidebarOpen(true)}
               />
             </PageWrapper>

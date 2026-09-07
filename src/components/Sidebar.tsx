@@ -1,11 +1,10 @@
-import { useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Library, Users, Disc3, ListMusic, Plus, X } from 'lucide-react'
+import { Library, Users, Disc3, ListMusic, Plus, X, Music2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarProps {
   onNavigate: (path: string) => void
-  onFilesSelected?: (files: File[]) => void
+  onImportMusic?: () => void
   isOpen?: boolean
   onClose?: () => void
 }
@@ -17,21 +16,8 @@ const NAV_ITEMS: { path: string; label: string; icon: typeof Library }[] = [
   { path: '/playlists', label: 'Playlists', icon: ListMusic },
 ]
 
-export default function Sidebar({ onNavigate, onFilesSelected, isOpen, onClose }: SidebarProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
+export default function Sidebar({ onNavigate, onImportMusic, isOpen, onClose }: SidebarProps) {
   const location = useLocation()
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const fileList = e.target.files
-    if (!fileList) return
-    const audioFiles = Array.from(fileList).filter(f => f.type.startsWith('audio/'))
-    if (audioFiles.length > 0 && onFilesSelected) {
-      onFilesSelected(audioFiles)
-    }
-    if (inputRef.current) {
-      inputRef.current.value = ''
-    }
-  }
 
   const handleNavClick = (path: string) => {
     onNavigate(path)
@@ -40,7 +26,7 @@ export default function Sidebar({ onNavigate, onFilesSelected, isOpen, onClose }
 
   return (
     <aside className={cn(
-      "w-[300px] shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden",
+      "w-[272px] shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden shadow-[8px_0_32px_hsl(28_30%_3%_/_0.12)]",
       "fixed lg:relative inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out",
       isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
     )}>
@@ -48,32 +34,31 @@ export default function Sidebar({ onNavigate, onFilesSelected, isOpen, onClose }
       <div className="lg:hidden absolute top-4 right-4">
         <button
           onClick={onClose}
-          className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Close navigation"
+          className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <X size={20} />
+          <X size={18} />
         </button>
       </div>
 
-      <div className="p-4 pb-2 pt-16 lg:pt-4">
+      <div className="p-5 pb-3 pt-16 lg:pt-5">
+        <div className="flex items-center gap-2 px-1 pb-5 text-foreground">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[0_0_24px_hsl(38_88%_62%_/_0.2)]">
+            <Music2 size={17} />
+          </span>
+          <span className="text-sm font-semibold tracking-[0.18em] uppercase">Sonata</span>
+        </div>
         <button
-          onClick={() => inputRef.current?.click()}
-          className="w-full flex items-center gap-2 px-4 py-2.5 rounded-md bg-primary text-primary-foreground text-base font-medium hover:opacity-90 transition-opacity"
+          onClick={onImportMusic}
+          aria-label="Add music"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-[0_8px_24px_hsl(38_88%_62%_/_0.14)] hover:brightness-105 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
         >
-          <Plus size={18} />
+          <Plus size={17} />
           Add Music
         </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="audio/*"
-          multiple
-          {...({ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
-          onChange={handleChange}
-          className="hidden"
-        />
       </div>
 
-      <nav className="flex-1 px-2 py-2">
+      <nav aria-label="Main navigation" className="flex-1 px-3 py-3">
         {NAV_ITEMS.map(item => {
           const Icon = item.icon
           const isActive = location.pathname === item.path
@@ -82,7 +67,7 @@ export default function Sidebar({ onNavigate, onFilesSelected, isOpen, onClose }
               key={item.path}
               onClick={() => handleNavClick(item.path)}
               className={cn(
-                'w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-base transition-colors',
+                'w-full flex items-center gap-3 px-3.5 py-3 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isActive
                   ? 'bg-accent text-accent-foreground font-medium'
                   : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',

@@ -44,20 +44,20 @@ export default function PlayerBar({
   onCoverClick,
 }: PlayerBarProps) {
   return (
-    <div className="h-[88px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-4 gap-2 sm:gap-4">
+    <div className="h-[96px] sm:h-[88px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-4 gap-2 sm:gap-4 shadow-[0_-12px_32px_hsl(28_30%_3%_/_0.14)]">
       {/* Left: Cover + track info */}
       <div 
-        className="flex items-center gap-2 sm:gap-3 w-[160px] sm:w-[240px] shrink-0 cursor-pointer group"
+        className="flex items-center gap-2 sm:gap-3 w-[124px] sm:w-[240px] shrink-0 cursor-pointer group"
         onClick={() => onCoverClick?.()}
       >
         {track?.cover ? (
           <img
             src={track.cover}
             alt=""
-            className="w-[40px] h-[40px] sm:w-[52px] sm:h-[52px] rounded-md object-cover group-hover:opacity-75 transition-opacity"
+            className="w-[36px] h-[36px] sm:w-[52px] sm:h-[52px] rounded-lg object-cover group-hover:opacity-75 transition-opacity"
           />
         ) : (
-          <div className="w-[40px] h-[40px] sm:w-[52px] sm:h-[52px] rounded-md bg-muted flex items-center justify-center group-hover:opacity-75 transition-opacity">
+          <div className="w-[36px] h-[36px] sm:w-[52px] sm:h-[52px] rounded-lg bg-muted flex items-center justify-center group-hover:opacity-75 transition-opacity">
             <Play size={16} className="sm:hidden text-muted-foreground" />
             <Play size={20} className="hidden sm:block text-muted-foreground" />
           </div>
@@ -66,7 +66,7 @@ export default function PlayerBar({
           <p className="text-xs sm:text-sm font-medium truncate group-hover:text-foreground transition-colors">
             {track?.title ?? '未播放'}
           </p>
-          <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
+          <div className="hidden sm:block text-[10px] sm:text-xs text-muted-foreground truncate">
             {onArtistClick && track?.artist ? (
               parseArtists(track.artist).map((artist, idx) => (
                 <span key={idx}>
@@ -96,21 +96,24 @@ export default function PlayerBar({
           <button
             onClick={onPrev}
             disabled={!canPrev}
-            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 transition-opacity"
+            aria-label="Previous track"
+            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
           >
             <SkipBack size={18} fill="currentColor" />
           </button>
           <button
             onClick={onTogglePlay}
             disabled={!track}
-            className="p-2.5 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+            className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-[0_0_20px_hsl(38_88%_62%_/_0.18)] hover:brightness-105 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-player"
           >
             {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
           </button>
           <button
             onClick={onNext}
             disabled={!canNext}
-            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 transition-opacity"
+            aria-label="Next track"
+            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
           >
             <SkipForward size={18} fill="currentColor" />
           </button>
@@ -125,6 +128,7 @@ export default function PlayerBar({
             max={duration || 0}
             value={currentTime}
             onChange={e => onSeek(Number(e.target.value))}
+            aria-label="Track progress"
             className="progress-bar flex-1 h-5"
             style={{ '--range-fill': `${duration > 0 ? (currentTime / duration) * 100 : 0}%` } as React.CSSProperties}
           />
@@ -136,7 +140,8 @@ export default function PlayerBar({
       <div className="hidden sm:flex items-center gap-2 w-[160px] shrink-0 justify-end">
         <button
           onClick={() => onVolumeChange(volume === 0 ? 1 : 0)}
-          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+          className="p-1 text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
         >
           {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>
@@ -147,6 +152,7 @@ export default function PlayerBar({
           step={0.01}
           value={volume}
           onChange={e => onVolumeChange(Number(e.target.value))}
+          aria-label="Volume"
           className="w-24 h-4 progress-bar"
           style={{ '--range-fill': `${volume * 100}%` } as React.CSSProperties}
         />
