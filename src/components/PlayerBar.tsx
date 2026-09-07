@@ -8,6 +8,7 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
+  Maximize2,
 } from 'lucide-react'
 
 interface PlayerBarProps {
@@ -44,27 +45,36 @@ export default function PlayerBar({
   onCoverClick,
 }: PlayerBarProps) {
   return (
-    <div className="h-[96px] sm:h-[88px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-4 gap-2 sm:gap-4 shadow-[0_-12px_32px_hsl(28_30%_3%_/_0.14)]">
+    <div className="h-[104px] sm:h-[92px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-5 gap-2 sm:gap-5 shadow-[0_-12px_32px_hsl(28_30%_3%_/_0.14)]">
       {/* Left: Cover + track info */}
       <div 
-        className="flex items-center gap-2 sm:gap-3 w-[124px] sm:w-[240px] shrink-0 cursor-pointer group"
+        className="flex items-center gap-2 sm:gap-3 w-[132px] sm:w-[280px] shrink-0 cursor-pointer group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => onCoverClick?.()}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onCoverClick?.()
+          }
+        }}
+        role="button"
+        tabIndex={track ? 0 : -1}
+        aria-label={track ? 'Open now playing' : 'No track selected'}
       >
         {track?.cover ? (
           <img
             src={track.cover}
             alt=""
-            className="w-[36px] h-[36px] sm:w-[52px] sm:h-[52px] rounded-lg object-cover group-hover:opacity-75 transition-opacity"
+            className="w-[40px] h-[40px] sm:w-[56px] sm:h-[56px] rounded-lg object-cover group-hover:opacity-75 transition-opacity"
           />
         ) : (
-          <div className="w-[36px] h-[36px] sm:w-[52px] sm:h-[52px] rounded-lg bg-muted flex items-center justify-center group-hover:opacity-75 transition-opacity">
+          <div className="w-[40px] h-[40px] sm:w-[56px] sm:h-[56px] rounded-lg bg-muted flex items-center justify-center group-hover:opacity-75 transition-opacity">
             <Play size={16} className="sm:hidden text-muted-foreground" />
             <Play size={20} className="hidden sm:block text-muted-foreground" />
           </div>
         )}
         <div className="min-w-0">
           <p className="text-xs sm:text-sm font-medium truncate group-hover:text-foreground transition-colors">
-            {track?.title ?? '未播放'}
+            {track?.title ?? 'No track selected'}
           </p>
           <div className="hidden sm:block text-[10px] sm:text-xs text-muted-foreground truncate">
             {onArtistClick && track?.artist ? (
@@ -83,9 +93,10 @@ export default function PlayerBar({
                 </span>
               ))
             ) : (
-              track?.artist || '未知艺术家'
+              track?.artist || 'Choose a track to start listening'
             )}
           </div>
+          {track && <Maximize2 size={15} className="hidden shrink-0 text-muted-foreground transition group-hover:text-primary sm:block" />}
         </div>
       </div>
 
