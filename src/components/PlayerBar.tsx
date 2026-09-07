@@ -5,6 +5,7 @@ import {
   Play,
   Pause,
   SkipForward,
+  Shuffle,
   Repeat,
   Repeat1,
   Volume2,
@@ -15,6 +16,7 @@ interface PlayerBarProps {
   hasTrack: boolean
   isPlaying: boolean
   repeatMode: RepeatMode
+  shuffle: boolean
   currentTime: number
   duration: number
   volume: number
@@ -26,12 +28,14 @@ interface PlayerBarProps {
   onSeek: (time: number) => void
   onVolumeChange: (volume: number) => void
   onCycleRepeatMode: () => void
+  onToggleShuffle: () => void
 }
 
 export default function PlayerBar({
   hasTrack,
   isPlaying,
   repeatMode,
+  shuffle,
   currentTime,
   duration,
   volume,
@@ -43,6 +47,7 @@ export default function PlayerBar({
   onSeek,
   onVolumeChange,
   onCycleRepeatMode,
+  onToggleShuffle,
 }: PlayerBarProps) {
   return (
     <div className="h-[104px] sm:h-[92px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-5 gap-2 sm:gap-5 shadow-sm">
@@ -73,6 +78,14 @@ export default function PlayerBar({
             className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
           >
             <SkipForward size={18} fill="currentColor" />
+          </button>
+          <button
+            onClick={onToggleShuffle}
+            aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
+            title={shuffle ? 'Shuffle on' : 'Shuffle off'}
+            className={`rounded-md p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${shuffle ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-primary'}`}
+          >
+            <Shuffle size={18} />
           </button>
           <button
             onClick={onCycleRepeatMode}

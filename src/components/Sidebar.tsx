@@ -1,10 +1,12 @@
 import { useLocation } from 'react-router-dom'
-import { Library, Users, Disc3, ListMusic, Plus, X, Music2 } from 'lucide-react'
+import { Library, Users, Disc3, ListMusic, Plus, X, Music2, Sun, Moon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarProps {
   onNavigate: (path: string) => void
   onImportMusic?: () => void
+  theme: 'light' | 'dark'
+  onToggleTheme: () => void
   isOpen?: boolean
   onClose?: () => void
 }
@@ -16,7 +18,7 @@ const NAV_ITEMS: { path: string; label: string; icon: typeof Library }[] = [
   { path: '/playlists', label: 'Playlists', icon: ListMusic },
 ]
 
-export default function Sidebar({ onNavigate, onImportMusic, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ onNavigate, onImportMusic, theme, onToggleTheme, isOpen, onClose }: SidebarProps) {
   const location = useLocation()
 
   const handleNavClick = (path: string) => {
@@ -55,6 +57,18 @@ export default function Sidebar({ onNavigate, onImportMusic, isOpen, onClose }: 
         >
           <Plus size={17} />
           Add Music
+        </button>
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+          className="mt-3 flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="flex items-center gap-2">
+            {theme === 'light' ? <Sun size={15} /> : <Moon size={15} />}
+            {theme === 'light' ? 'Light theme' : 'Dark theme'}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider">Switch</span>
         </button>
       </div>
 

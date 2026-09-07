@@ -24,9 +24,11 @@ interface ScrollPositions {
 }
 
 // Wrapper component that provides navigation context to pages
-function PageWrapper({ children, onImportMusic, handleNavigate, onMainRef, sidebarOpen, onSidebarClose }: {
+function PageWrapper({ children, onImportMusic, theme = 'light', onToggleTheme = () => {}, handleNavigate, onMainRef, sidebarOpen, onSidebarClose }: {
   children: React.ReactNode
   onImportMusic?: () => void
+  theme?: 'light' | 'dark'
+  onToggleTheme?: () => void
   handleNavigate: (path: string) => void
   onMainRef?: (ref: HTMLElement | null) => void
   sidebarOpen?: boolean
@@ -57,6 +59,8 @@ function PageWrapper({ children, onImportMusic, handleNavigate, onMainRef, sideb
       <Sidebar 
         onNavigate={handleNavigate} 
         onImportMusic={onImportMusic}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
         isOpen={sidebarOpen}
         onClose={onSidebarClose}
       />
@@ -72,8 +76,16 @@ function App() {
   const [tracks, setTracks] = useState<Track[]>([])
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return localStorage.getItem('sonata-theme') === 'dark' ? 'dark' : 'light'
+  })
   const importInputRef = useRef<HTMLInputElement>(null)
   const tracksRef = useRef(tracks)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('sonata-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     tracksRef.current = tracks
@@ -93,6 +105,7 @@ function App() {
     duration,
     volume,
     repeatMode,
+    shuffle,
     canPrev,
     canNext,
     playTrack,
@@ -102,6 +115,7 @@ function App() {
     seek,
     setVolume,
     cycleRepeatMode,
+    toggleShuffle,
   } = useAudioPlayer(tracks)
 
   // Auto-play first track when going from empty to having tracks
@@ -146,6 +160,10 @@ function App() {
 
   const handleImportMusic = useCallback(() => {
     importInputRef.current?.click()
+  }, [])
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light')
   }, [])
 
   const handleImportInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -321,7 +339,7 @@ function App() {
         <Routes>
           <Route path="/library" element={
             <PageWrapper 
-              onImportMusic={handleImportMusic} 
+              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -344,7 +362,7 @@ function App() {
           
           <Route path="/artists" element={
             <PageWrapper 
-              onImportMusic={handleImportMusic} 
+              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -362,7 +380,7 @@ function App() {
           
           <Route path="/artists/:artistName" element={
             <PageWrapper 
-              onImportMusic={handleImportMusic} 
+              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -384,7 +402,7 @@ function App() {
           
           <Route path="/albums" element={
             <PageWrapper 
-              onImportMusic={handleImportMusic} 
+              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -403,7 +421,7 @@ function App() {
           
           <Route path="/albums/:albumArtist/:albumName" element={
             <PageWrapper 
-              onImportMusic={handleImportMusic} 
+              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -420,7 +438,7 @@ function App() {
           
           <Route path="/playlists" element={
             <PageWrapper 
-              onImportMusic={handleImportMusic} 
+              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -441,7 +459,7 @@ function App() {
           {/* Default route redirects to library */}
           <Route path="/" element={
             <PageWrapper 
-              onImportMusic={handleImportMusic} 
+              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
               handleNavigate={handleNavigate} 
               onMainRef={(ref) => { mainRefForNav.current = ref }}
               sidebarOpen={sidebarOpen}
@@ -469,6 +487,7 @@ function App() {
         hasTrack={Boolean(currentTrack)}
         isPlaying={isPlaying}
         repeatMode={repeatMode}
+        shuffle={shuffle}
         currentTime={currentTime}
         duration={duration}
         volume={volume}
@@ -480,6 +499,7 @@ function App() {
         onSeek={seek}
         onVolumeChange={setVolume}
         onCycleRepeatMode={cycleRepeatMode}
+        onToggleShuffle={toggleShuffle}
       />
     </div>
   )

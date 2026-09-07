@@ -32,6 +32,28 @@
   --animate-marquee: marquee 10s linear infinite;
 }
 
+:root[data-theme='dark'] {
+  --color-background: hsl(232 22% 10%);
+  --color-foreground: hsl(230 20% 94%);
+  --color-card: hsl(232 20% 14%);
+  --color-card-foreground: hsl(230 20% 94%);
+  --color-muted: hsl(232 17% 20%);
+  --color-muted-foreground: hsl(230 12% 68%);
+  --color-border: hsl(232 15% 25%);
+  --color-accent: hsl(258 28% 24%);
+  --color-accent-foreground: hsl(258 70% 86%);
+  --color-primary: hsl(258 62% 70%);
+  --color-primary-foreground: hsl(232 22% 12%);
+  --color-sidebar: hsl(232 22% 12%);
+  --color-sidebar-foreground: hsl(230 20% 94%);
+  --color-sidebar-border: hsl(232 15% 23%);
+  --color-player: hsl(232 20% 13%);
+  --color-player-border: hsl(232 15% 25%);
+  --color-ring: hsl(258 62% 70%);
+  --color-popover: hsl(232 20% 14%);
+  --color-popover-foreground: hsl(230 20% 94%);
+}
+
 @keyframes marquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
