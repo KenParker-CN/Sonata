@@ -8,7 +8,6 @@ import Sidebar from '@/components/Sidebar'
 import PlayerBar from '@/components/PlayerBar'
 import Breadcrumb from '@/components/Breadcrumb'
 import ImportProgressToast from '@/components/ImportProgressToast'
-import ExpandedNowPlaying from '@/components/ExpandedNowPlaying'
 import LibraryPage from '@/pages/LibraryPage'
 import ArtistsPage from '@/pages/ArtistsPage'
 import ArtistDetailPage from '@/pages/ArtistDetailPage'
@@ -73,7 +72,6 @@ function App() {
   const [tracks, setTracks] = useState<Track[]>([])
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [nowPlayingOpen, setNowPlayingOpen] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
   const tracksRef = useRef(tracks)
 
@@ -94,6 +92,7 @@ function App() {
     currentTime,
     duration,
     volume,
+    repeatMode,
     canPrev,
     canNext,
     playTrack,
@@ -102,6 +101,7 @@ function App() {
     playPrev,
     seek,
     setVolume,
+    cycleRepeatMode,
   } = useAudioPlayer(tracks)
 
   // Auto-play first track when going from empty to having tracks
@@ -466,8 +466,9 @@ function App() {
 
       {/* PlayerBar is outside the page switch — it persists across navigation */}
       <PlayerBar
-        track={currentTrack}
+        hasTrack={Boolean(currentTrack)}
         isPlaying={isPlaying}
+        repeatMode={repeatMode}
         currentTime={currentTime}
         duration={duration}
         volume={volume}
@@ -478,25 +479,7 @@ function App() {
         onNext={playNext}
         onSeek={seek}
         onVolumeChange={setVolume}
-        onArtistClick={handleGoToArtist}
-        onCoverClick={() => setNowPlayingOpen(true)}
-      />
-
-      {/* Expanded Now Playing overlay */}
-      <ExpandedNowPlaying
-        isOpen={nowPlayingOpen}
-        onClose={() => setNowPlayingOpen(false)}
-        track={currentTrack}
-        isPlaying={isPlaying}
-        currentTime={currentTime}
-        duration={duration}
-        canPrev={canPrev}
-        canNext={canNext}
-        onTogglePlay={togglePlay}
-        onPrev={playPrev}
-        onNext={playNext}
-        onSeek={seek}
-        onArtistClick={handleGoToArtist}
+        onCycleRepeatMode={cycleRepeatMode}
       />
     </div>
   )

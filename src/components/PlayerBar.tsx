@@ -1,19 +1,20 @@
-import type { Track } from '@/types/music'
+import type { RepeatMode } from '@/types/music'
 import { formatTime } from '@/utils/formatTime'
-import { parseArtists } from '@/utils/parseArtists'
 import {
   SkipBack,
   Play,
   Pause,
   SkipForward,
+  Repeat,
+  Repeat1,
   Volume2,
   VolumeX,
-  Maximize2,
 } from 'lucide-react'
 
 interface PlayerBarProps {
-  track: Track | null
+  hasTrack: boolean
   isPlaying: boolean
+  repeatMode: RepeatMode
   currentTime: number
   duration: number
   volume: number
@@ -24,13 +25,13 @@ interface PlayerBarProps {
   onNext: () => void
   onSeek: (time: number) => void
   onVolumeChange: (volume: number) => void
-  onArtistClick?: (artistName: string) => void
-  onCoverClick?: () => void
+  onCycleRepeatMode: () => void
 }
 
 export default function PlayerBar({
-  track,
+  hasTrack,
   isPlaying,
+  repeatMode,
   currentTime,
   duration,
   volume,
@@ -41,65 +42,10 @@ export default function PlayerBar({
   onNext,
   onSeek,
   onVolumeChange,
-  onArtistClick,
-  onCoverClick,
+  onCycleRepeatMode,
 }: PlayerBarProps) {
   return (
     <div className="h-[104px] sm:h-[92px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-5 gap-2 sm:gap-5 shadow-sm">
-      {/* Left: Cover + track info */}
-      <div 
-        className="flex items-center gap-2 sm:gap-3 w-[132px] sm:w-[280px] shrink-0 cursor-pointer group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => onCoverClick?.()}
-        onKeyDown={event => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            onCoverClick?.()
-          }
-        }}
-        role="button"
-        tabIndex={track ? 0 : -1}
-        aria-label={track ? 'Open now playing' : 'No track selected'}
-      >
-        {track?.cover ? (
-          <img
-            src={track.cover}
-            alt=""
-            className="w-[40px] h-[40px] sm:w-[56px] sm:h-[56px] rounded-lg object-cover group-hover:opacity-75 transition-opacity"
-          />
-        ) : (
-          <div className="w-[40px] h-[40px] sm:w-[56px] sm:h-[56px] rounded-lg bg-muted flex items-center justify-center group-hover:opacity-75 transition-opacity">
-            <Play size={16} className="sm:hidden text-muted-foreground" />
-            <Play size={20} className="hidden sm:block text-muted-foreground" />
-          </div>
-        )}
-        <div className="min-w-0">
-          <p className="text-xs sm:text-sm font-medium truncate group-hover:text-foreground transition-colors">
-            {track?.title ?? 'No track selected'}
-          </p>
-          <div className="hidden sm:block text-[10px] sm:text-xs text-muted-foreground truncate">
-            {onArtistClick && track?.artist ? (
-              parseArtists(track.artist).map((artist, idx) => (
-                <span key={idx}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onArtistClick(artist)
-                    }}
-                    className="hover:text-foreground transition-colors"
-                  >
-                    {artist}
-                  </button>
-                  {idx < parseArtists(track.artist).length - 1 && ', '}
-                </span>
-              ))
-            ) : (
-              track?.artist || 'Choose a track to start listening'
-            )}
-          </div>
-          {track && <Maximize2 size={15} className="hidden shrink-0 text-muted-foreground transition group-hover:text-primary sm:block" />}
-        </div>
-      </div>
-
       {/* Center: Controls + progress */}
       <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 min-w-0">
         {/* Transport controls */}
@@ -114,7 +60,7 @@ export default function PlayerBar({
           </button>
           <button
             onClick={onTogglePlay}
-            disabled={!track}
+            disabled={!hasTrack}
             aria-label={isPlaying ? 'Pause' : 'Play'}
             className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-sm hover:brightness-105 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-player"
           >
@@ -127,6 +73,14 @@ export default function PlayerBar({
             className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
           >
             <SkipForward size={18} fill="currentColor" />
+          </button>
+          <button
+            onClick={onCycleRepeatMode}
+            aria-label={repeatMode === 'off' ? 'Enable repeat all' : repeatMode === 'all' ? 'Enable repeat one' : 'Disable repeat'}
+            title={repeatMode === 'off' ? 'Repeat all' : repeatMode === 'all' ? 'Repeat one' : 'Repeat off'}
+            className={`rounded-md p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${repeatMode === 'off' ? 'text-muted-foreground hover:text-primary' : 'text-primary bg-accent'}`}
+          >
+            {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
           </button>
         </div>
 
