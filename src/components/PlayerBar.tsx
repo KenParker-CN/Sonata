@@ -45,7 +45,7 @@ export default function PlayerBar({
   onCoverClick,
 }: PlayerBarProps) {
   return (
-    <div className="h-[104px] sm:h-[92px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-5 gap-2 sm:gap-5 shadow-[0_-12px_32px_hsl(28_30%_3%_/_0.14)]">
+    <div className="h-[104px] sm:h-[92px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-5 gap-2 sm:gap-5 shadow-sm">
       {/* Left: Cover + track info */}
       <div 
         className="flex items-center gap-2 sm:gap-3 w-[132px] sm:w-[280px] shrink-0 cursor-pointer group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -116,7 +116,7 @@ export default function PlayerBar({
             onClick={onTogglePlay}
             disabled={!track}
             aria-label={isPlaying ? 'Pause' : 'Play'}
-            className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-[0_0_20px_hsl(38_88%_62%_/_0.18)] hover:brightness-105 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-player"
+            className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-sm hover:brightness-105 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-player"
           >
             {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
           </button>

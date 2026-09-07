@@ -1,27 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(30 18% 8%);
-  --color-foreground: hsl(36 24% 94%);
-  --color-card: hsl(28 17% 12%);
-  --color-card-foreground: hsl(36 24% 94%);
-  --color-muted: hsl(28 14% 18%);
-  --color-muted-foreground: hsl(30 10% 63%);
-  --color-border: hsl(28 14% 22%);
-  --color-accent: hsl(34 27% 20%);
-  --color-accent-foreground: hsl(39 88% 78%);
-  --color-primary: hsl(38 88% 62%);
-  --color-primary-foreground: hsl(28 30% 10%);
-  --color-sidebar: hsl(28 19% 10%);
-  --color-sidebar-foreground: hsl(36 24% 94%);
-  --color-sidebar-border: hsl(28 14% 20%);
-  --color-player: hsl(27 20% 9%);
-  --color-player-border: hsl(28 14% 22%);
-  --color-ring: hsl(38 88% 62%);
-  --color-popover: hsl(28 17% 12%);
-  --color-popover-foreground: hsl(36 24% 94%);
+  --color-background: hsl(36 30% 98%);
+  --color-foreground: hsl(232 22% 18%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(232 22% 18%);
+  --color-muted: hsl(230 20% 96%);
+  --color-muted-foreground: hsl(230 10% 48%);
+  --color-border: hsl(230 18% 90%);
+  --color-accent: hsl(252 55% 96%);
+  --color-accent-foreground: hsl(258 40% 38%);
+  --color-primary: hsl(258 48% 56%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-sidebar: hsl(36 30% 97%);
+  --color-sidebar-foreground: hsl(232 22% 18%);
+  --color-sidebar-border: hsl(230 18% 91%);
+  --color-player: hsl(0 0% 100%);
+  --color-player-border: hsl(230 18% 90%);
+  --color-ring: hsl(258 48% 56%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(232 22% 18%);
 
-  --shadow-glow: 0 0 80px hsl(38 88% 62% / 0.08);
+  --shadow-glow: 0 8px 30px hsl(258 48% 56% / 0.12);
 
   --radius-lg: 8px;
   --radius-md: 6px;
@@ -43,15 +43,11 @@
 .badge-master {
   background-image: linear-gradient(
     178deg,
-    hsl(45 88% 67%) 0%,
-    hsl(42 85% 56%) 48%,
-    hsl(38 80% 47%) 100%
+    hsl(258 60% 96%) 0%,
+    hsl(258 52% 91%) 100%
   );
-  color: hsl(32 65% 14%);
-  box-shadow:
-    inset 0 1px 0 hsl(48 100% 90% / 0.75),
-    inset 0 -1px 0 hsl(32 70% 30% / 0.4),
-    0 1px 1.5px hsl(0 0% 0% / 0.16);
+  color: hsl(258 40% 38%);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.8), 0 1px 2px hsl(258 30% 40% / 0.08);
 }
 
 @keyframes badge-sheen {
@@ -95,31 +91,6 @@
 @media (prefers-reduced-motion: reduce) {
   .badge-master-sheen {
     animation: none;
-  }
-}
-
-/* Dark mode — follows system preference */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: hsl(30 18% 8%);
-    --color-foreground: hsl(36 24% 94%);
-    --color-card: hsl(28 17% 12%);
-    --color-card-foreground: hsl(36 24% 94%);
-    --color-muted: hsl(28 14% 18%);
-    --color-muted-foreground: hsl(30 10% 63%);
-    --color-border: hsl(28 14% 22%);
-    --color-accent: hsl(34 27% 20%);
-    --color-accent-foreground: hsl(39 88% 78%);
-    --color-primary: hsl(38 88% 62%);
-    --color-primary-foreground: hsl(28 30% 10%);
-    --color-sidebar: hsl(28 19% 10%);
-    --color-sidebar-foreground: hsl(36 24% 94%);
-    --color-sidebar-border: hsl(28 14% 20%);
-    --color-player: hsl(27 20% 9%);
-    --color-player-border: hsl(28 14% 22%);
-    --color-ring: hsl(38 88% 62%);
-    --color-popover: hsl(28 17% 12%);
-    --color-popover-foreground: hsl(36 24% 94%);
   }
 }
 

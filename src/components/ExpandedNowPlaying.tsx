@@ -230,7 +230,7 @@ export default function ExpandedNowPlaying({
             {/* Left column: Artwork + Track Info + Technical Info (2/5 width) */}
             <div className="flex flex-col gap-5 lg:min-h-0 lg:overflow-hidden">
               {/* Artwork */}
-              <div className="relative mx-auto aspect-square w-full max-w-[min(78vw,380px)] shrink-0 overflow-hidden rounded-xl bg-muted shadow-[0_24px_80px_hsl(28_30%_3%_/_0.35)] lg:mx-0 lg:max-w-none">
+              <div className="relative mx-auto aspect-square w-full max-w-[min(78vw,380px)] shrink-0 overflow-hidden rounded-xl bg-muted shadow-md lg:mx-0 lg:max-w-none">
                 {track?.cover ? (
                   <img
                     src={track.cover}
@@ -438,7 +438,7 @@ export default function ExpandedNowPlaying({
                 onClick={onTogglePlay}
                 disabled={!track}
                 aria-label={isPlaying ? 'Pause' : 'Play'}
-                className="rounded-full bg-primary p-3 text-primary-foreground shadow-[0_0_28px_hsl(38_88%_62%_/_0.2)] transition hover:brightness-105 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-full bg-primary p-3 text-primary-foreground shadow-sm transition hover:brightness-105 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
               </button>
@@ -474,13 +474,13 @@ export default function ExpandedNowPlaying({
 
   return isDesktop ? (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DialogContent className="h-[min(860px,calc(100dvh-48px))] w-[min(1200px,calc(100vw-48px))] max-w-none gap-0 overflow-hidden rounded-2xl border-border/70 bg-background p-0 shadow-2xl [&>button]:hidden">
+      <DialogContent className="h-[min(860px,calc(100dvh-48px))] w-[min(1200px,calc(100vw-48px))] max-w-none gap-0 overflow-hidden rounded-2xl border-border/70 bg-background p-0 shadow-lg [&>button]:hidden">
         {surfaceContent}
       </DialogContent>
     </Dialog>
   ) : (
     <Drawer open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DrawerContent className="mx-auto h-[100dvh] w-full rounded-none border-none bg-background p-0 shadow-2xl sm:h-[92vh] sm:w-[96vw] sm:max-w-7xl sm:rounded-2xl overflow-hidden flex flex-col">
+      <DrawerContent className="mx-auto h-[100dvh] w-full rounded-none border-none bg-background p-0 shadow-lg sm:h-[92vh] sm:w-[96vw] sm:max-w-7xl sm:rounded-2xl overflow-hidden flex flex-col">
         {surfaceContent}
       </DrawerContent>
     </Drawer>
