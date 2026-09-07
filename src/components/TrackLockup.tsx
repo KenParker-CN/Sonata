@@ -21,6 +21,7 @@ interface TrackLockupProps {
   onGoToAlbum?: (album: { name: string; albumArtist: string }) => void
   onGoToArtist?: (artistName: string) => void
   onRemoveFromLibrary?: (trackId: string) => void
+  showQualityBadge?: boolean
 }
 
 export default function TrackLockup({ 
@@ -32,6 +33,7 @@ export default function TrackLockup({
   onGoToAlbum,
   onGoToArtist,
   onRemoveFromLibrary,
+  showQualityBadge = true,
 }: TrackLockupProps) {
   const [contextMenuOpen, setContextMenuOpen] = useState(false)
   const qualityBadge = getAudioQualityBadge(track)
@@ -69,7 +71,7 @@ export default function TrackLockup({
 
           {/* Content */}
           <div className="content min-w-0 flex-1 flex items-center gap-1.5">
-            <AudioQualityBadge badge={qualityBadge} />
+            {showQualityBadge && <AudioQualityBadge badge={qualityBadge} />}
             <div className="min-w-0 flex-1">
               <p className={cn(
                 'text-sm truncate',

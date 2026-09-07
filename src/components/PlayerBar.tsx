@@ -1,4 +1,4 @@
-import type { Track } from '@/types/music'
+import type { RepeatMode, Track } from '@/types/music'
 import { formatTime } from '@/utils/formatTime'
 import { parseArtists } from '@/utils/parseArtists'
 import {
@@ -6,13 +6,19 @@ import {
   Play,
   Pause,
   SkipForward,
+  Shuffle,
+  Repeat,
+  Repeat1,
   Volume2,
   VolumeX,
 } from 'lucide-react'
 
 interface PlayerBarProps {
   track: Track | null
+  hasTrack: boolean
   isPlaying: boolean
+  repeatMode: RepeatMode
+  shuffle: boolean
   currentTime: number
   duration: number
   volume: number
@@ -23,13 +29,16 @@ interface PlayerBarProps {
   onNext: () => void
   onSeek: (time: number) => void
   onVolumeChange: (volume: number) => void
-  onArtistClick?: (artistName: string) => void
-  onCoverClick?: () => void
+  onCycleRepeatMode: () => void
+  onToggleShuffle: () => void
 }
 
 export default function PlayerBar({
   track,
+  hasTrack,
   isPlaying,
+  repeatMode,
+  shuffle,
   currentTime,
   duration,
   volume,
@@ -40,52 +49,27 @@ export default function PlayerBar({
   onNext,
   onSeek,
   onVolumeChange,
-  onArtistClick,
-  onCoverClick,
+  onCycleRepeatMode,
+  onToggleShuffle,
 }: PlayerBarProps) {
   return (
-    <div className="h-[88px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-4 gap-2 sm:gap-4">
-      {/* Left: Cover + track info */}
-      <div 
-        className="flex items-center gap-2 sm:gap-3 w-[160px] sm:w-[240px] shrink-0 cursor-pointer group"
-        onClick={() => onCoverClick?.()}
-      >
+    <div className="h-[104px] sm:h-[92px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-5 gap-2 sm:gap-5 shadow-sm">
+      {/* Current track — informational only; Now Playing is no longer interactive */}
+      <div className="flex w-[140px] shrink-0 items-center gap-2 min-w-0 sm:w-[240px] sm:gap-3">
         {track?.cover ? (
-          <img
-            src={track.cover}
-            alt=""
-            className="w-[40px] h-[40px] sm:w-[52px] sm:h-[52px] rounded-md object-cover group-hover:opacity-75 transition-opacity"
-          />
+          <img src={track.cover} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover sm:h-11 sm:w-11" />
         ) : (
-          <div className="w-[40px] h-[40px] sm:w-[52px] sm:h-[52px] rounded-md bg-muted flex items-center justify-center group-hover:opacity-75 transition-opacity">
-            <Play size={16} className="sm:hidden text-muted-foreground" />
-            <Play size={20} className="hidden sm:block text-muted-foreground" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground sm:h-11 sm:w-11">
+            <Play size={15} />
           </div>
         )}
         <div className="min-w-0">
-          <p className="text-xs sm:text-sm font-medium truncate group-hover:text-foreground transition-colors">
-            {track?.title ?? '未播放'}
+          <p className="truncate text-xs font-medium text-foreground sm:text-sm">
+            {track?.title ?? 'No track selected'}
           </p>
-          <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
-            {onArtistClick && track?.artist ? (
-              parseArtists(track.artist).map((artist, idx) => (
-                <span key={idx}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onArtistClick(artist)
-                    }}
-                    className="hover:text-foreground transition-colors"
-                  >
-                    {artist}
-                  </button>
-                  {idx < parseArtists(track.artist).length - 1 && ', '}
-                </span>
-              ))
-            ) : (
-              track?.artist || '未知艺术家'
-            )}
-          </div>
+          <p className="truncate text-[10px] text-muted-foreground sm:text-xs">
+            {track?.artist ? parseArtists(track.artist).join(', ') : 'No artist'}
+          </p>
         </div>
       </div>
 
@@ -96,23 +80,42 @@ export default function PlayerBar({
           <button
             onClick={onPrev}
             disabled={!canPrev}
-            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 transition-opacity"
+            aria-label="Previous track"
+            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
           >
             <SkipBack size={18} fill="currentColor" />
           </button>
           <button
             onClick={onTogglePlay}
-            disabled={!track}
-            className="p-2.5 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+            disabled={!hasTrack}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+            className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-sm hover:brightness-105 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-player"
           >
             {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
           </button>
           <button
             onClick={onNext}
             disabled={!canNext}
-            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 transition-opacity"
+            aria-label="Next track"
+            className="p-1.5 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
           >
             <SkipForward size={18} fill="currentColor" />
+          </button>
+          <button
+            onClick={onToggleShuffle}
+            aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
+            title={shuffle ? 'Shuffle on' : 'Shuffle off'}
+            className={`rounded-md p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${shuffle ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-primary'}`}
+          >
+            <Shuffle size={18} />
+          </button>
+          <button
+            onClick={onCycleRepeatMode}
+            aria-label={repeatMode === 'off' ? 'Enable repeat all' : repeatMode === 'all' ? 'Enable repeat one' : 'Disable repeat'}
+            title={repeatMode === 'off' ? 'Repeat all' : repeatMode === 'all' ? 'Repeat one' : 'Repeat off'}
+            className={`rounded-md p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${repeatMode === 'off' ? 'text-muted-foreground hover:text-primary' : 'text-primary bg-accent'}`}
+          >
+            {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
           </button>
         </div>
 
@@ -125,6 +128,7 @@ export default function PlayerBar({
             max={duration || 0}
             value={currentTime}
             onChange={e => onSeek(Number(e.target.value))}
+            aria-label="Track progress"
             className="progress-bar flex-1 h-5"
             style={{ '--range-fill': `${duration > 0 ? (currentTime / duration) * 100 : 0}%` } as React.CSSProperties}
           />
@@ -136,7 +140,8 @@ export default function PlayerBar({
       <div className="hidden sm:flex items-center gap-2 w-[160px] shrink-0 justify-end">
         <button
           onClick={() => onVolumeChange(volume === 0 ? 1 : 0)}
-          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+          className="p-1 text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
         >
           {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>
@@ -147,6 +152,7 @@ export default function PlayerBar({
           step={0.01}
           value={volume}
           onChange={e => onVolumeChange(Number(e.target.value))}
+          aria-label="Volume"
           className="w-24 h-4 progress-bar"
           style={{ '--range-fill': `${volume * 100}%` } as React.CSSProperties}
         />

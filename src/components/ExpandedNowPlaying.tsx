@@ -9,9 +9,15 @@ import AudioQualityBadge from '@/components/AudioQualityBadge'
 import {
   Drawer,
   DrawerContent,
+  DrawerTitle,
 } from '@/components/ui/Drawer'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import LyricsControls from '@/components/LyricsControls'
-import { Play, Pause, SkipBack, SkipForward } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, X, Disc3 } from 'lucide-react'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface ExpandedNowPlayingProps {
@@ -50,6 +56,8 @@ export default function ExpandedNowPlaying({
   
   // Find active lyric lines (can be multiple with same startTime) and words
   const activeLineIndices = findActiveLyricLines(currentTime, track?.lyrics ?? null)
+  const firstActiveLineIndex = activeLineIndices[0] ?? -1
+  const activeLineCount = activeLineIndices.length
   const activeWordIndices = new Map<number, number>()
   
   // For each active line, find the active word index if it has word-level sync
@@ -163,10 +171,10 @@ export default function ExpandedNowPlaying({
   
   // Auto-scroll active lyric line to center of viewport
   useEffect(() => {
-    if (activeLineIndices.length === 0 || !lyricsContainerRef.current) return
-    
+    if (activeLineCount === 0 || !lyricsContainerRef.current) return
+
     // Use the first active line as the scroll target
-    const firstActiveIndex = activeLineIndices[0]
+    const firstActiveIndex = firstActiveLineIndex
     const element = activeLineRefs.current[firstActiveIndex]
     const container = lyricsContainerRef.current
     
@@ -175,31 +183,54 @@ export default function ExpandedNowPlaying({
       const containerHeight = container.clientHeight
       const lineHeight = element.offsetHeight || 32 // approximate line height
       
-      // Estimate how many lines fit in viewport (with some margin)
-      const linesInViewport = Math.floor(containerHeight / lineHeight) - 1
-      
-      // Check if we're near the end: remaining lines <= lines that fit in viewport
-      const totalLines = track?.lyrics?.lines.length || 0
-      const remainingLines = totalLines - firstActiveIndex
-      const isNearEnd = remainingLines <= linesInViewport
-      
-      element.scrollIntoView({
+     
+      const elementRect = element.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      const elementTop = elementRect.top - containerRect.top + container.scrollTop
+      const targetTop = elementTop - containerHeight / 2 + lineHeight / 2
+      const maxScrollTop = container.scrollHeight - container.clientHeight
+      container.scrollTo({
+        top: Math.max(0, Math.min(targetTop, maxScrollTop)),
         behavior: 'smooth',
-        block: isNearEnd ? 'end' : 'center',
       })
     }
-  }, [activeLineIndices, track?.lyrics?.lines.length])
+  }, [activeLineCount, firstActiveLineIndex, track?.lyrics?.lines.length])
 
-  return (
-    <Drawer open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DrawerContent className="max-w-6xl mx-auto w-[95vw] h-[90vh] p-0 border-none bg-background overflow-hidden flex flex-col">
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const updateViewport = () => setIsDesktop(mediaQuery.matches)
+    updateViewport()
+    mediaQuery.addEventListener('change', updateViewport)
+    return () => mediaQuery.removeEventListener('change', updateViewport)
+  }, [])
+
+  const surfaceContent = (
+    <>
+      <DrawerTitle className="sr-only">Now Playing</DrawerTitle>
+      <DialogTitle className="sr-only">Now Playing</DialogTitle>
+        <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <Disc3 size={15} className="text-primary" />
+            Now Playing
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close now playing"
+            className="rounded-full p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X size={18} />
+          </button>
+        </div>
         {/* Main content - two columns: left (artwork + info), right (lyrics) */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 px-6 pt-6 h-full">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:h-full lg:overflow-hidden">
+          <div className="grid min-h-full grid-cols-1 gap-8 px-4 py-5 sm:px-8 sm:py-7 lg:h-full lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:gap-12 lg:px-12">
             {/* Left column: Artwork + Track Info + Technical Info (2/5 width) */}
-            <div className="lg:col-span-2 flex flex-col gap-4 overflow-hidden pb-6">
+            <div className="flex flex-col gap-5 lg:min-h-0 lg:overflow-hidden">
               {/* Artwork */}
-              <div className="w-full aspect-square rounded-lg overflow-hidden bg-muted shadow-lg shrink-0 relative">
+              <div className="relative mx-auto aspect-square w-full max-w-[min(78vw,380px)] shrink-0 overflow-hidden rounded-xl bg-muted shadow-md lg:mx-0 lg:max-w-none">
                 {track?.cover ? (
                   <img
                     src={track.cover}
@@ -221,11 +252,11 @@ export default function ExpandedNowPlaying({
               </div>
 
               {/* Track Information */}
-              <div className="space-y-2 flex-1 overflow-hidden">
+              <div className="space-y-3 text-center lg:flex-1 lg:overflow-hidden lg:text-left">
                 {parsedTitle?.movement ? (
                   <>
                     {/* Classical music layout: Work first, then emphasized Movement */}
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-2">
                       <p className="text-lg text-muted-foreground truncate hover:text-foreground transition-colors group cursor-pointer">
                         <span className="inline-block whitespace-nowrap group-hover:animate-marquee">
                           {parsedTitle.work}
@@ -241,7 +272,7 @@ export default function ExpandedNowPlaying({
                 ) : null}
 
                 {/* Two-column grid for Artist/Album */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-left">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Artist</p>
                     <div className="text-sm">
@@ -290,10 +321,13 @@ export default function ExpandedNowPlaying({
             </div>
 
             {/* Right column: Lyrics (3/5 width) */}
-            <div className="lg:col-span-3 flex flex-col h-full overflow-hidden pb-6">
+            <div className="flex min-h-[260px] flex-col overflow-hidden pb-2 lg:h-full lg:min-h-0 lg:pb-5">
               {/* Lyrics header with controls */}
-              <div className="flex items-center justify-between mb-2 shrink-0">
-                <div /> {/* Spacer for alignment */}
+              <div className="mb-3 flex shrink-0 items-center justify-between border-b border-border/60 pb-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary/80">Lyrics</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Follow the performance line by line</p>
+                </div>
                 <LyricsControls
                   showTranslation={showTranslation}
                   onShowTranslationChange={setShowTranslation}
@@ -308,7 +342,7 @@ export default function ExpandedNowPlaying({
               
               <div 
                 ref={lyricsContainerRef}
-                className="flex-1 min-h-0 overflow-y-auto pr-4 space-y-2 scrollbar-hide"
+                className="h-[min(46svh,420px)] min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-3 scrollbar-hide sm:pr-5 lg:h-auto lg:max-h-full"
                 style={{ fontSize: `${currentFontSize}rem` }}
               >
                 {track?.lyrics && track.lyrics.lines.length > 0 ? (
@@ -387,29 +421,32 @@ export default function ExpandedNowPlaying({
         </div>
 
         {/* Bottom: Playback controls */}
-        <div className="border-t border-border px-6 py-4 shrink-0">
-          <div className="flex flex-col gap-3">
+        <div className="border-t border-border/70 bg-player/80 px-4 py-4 backdrop-blur-xl shrink-0 sm:px-8 sm:py-5">
+          <div className="mx-auto flex max-w-3xl flex-col gap-3">
             {/* Controls - centered above progress bar */}
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-5">
               {/* Transport controls */}
               <button
                 onClick={onPrev}
                 disabled={!canPrev}
-                className="p-2 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 transition-opacity"
+                aria-label="Previous track"
+                className="rounded-md p-2 text-foreground transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <SkipBack size={20} fill="currentColor" />
               </button>
               <button
                 onClick={onTogglePlay}
                 disabled={!track}
-                className="p-3 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                className="rounded-full bg-primary p-3 text-primary-foreground shadow-sm transition hover:brightness-105 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
               </button>
               <button
                 onClick={onNext}
                 disabled={!canNext}
-                className="p-2 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 transition-opacity"
+                aria-label="Next track"
+                className="rounded-md p-2 text-foreground transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <SkipForward size={20} fill="currentColor" />
               </button>
@@ -424,6 +461,7 @@ export default function ExpandedNowPlaying({
                 max={duration || 0}
                 value={currentTime}
                 onChange={e => onSeek(Number(e.target.value))}
+                aria-label="Track progress"
                 className="progress-bar flex-1 h-5"
                 style={{ '--range-fill': `${duration > 0 ? (currentTime / duration) * 100 : 0}%` } as React.CSSProperties}
               />
@@ -431,6 +469,19 @@ export default function ExpandedNowPlaying({
             </div>
           </div>
         </div>
+    </>
+  )
+
+  return isDesktop ? (
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DialogContent className="h-[min(860px,calc(100dvh-48px))] w-[min(1200px,calc(100vw-48px))] max-w-none gap-0 overflow-hidden rounded-2xl border-border/70 bg-background p-0 shadow-lg [&>button]:hidden">
+        {surfaceContent}
+      </DialogContent>
+    </Dialog>
+  ) : (
+    <Drawer open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DrawerContent className="mx-auto h-[100dvh] w-full rounded-none border-none bg-background p-0 shadow-lg sm:h-[92vh] sm:w-[96vw] sm:max-w-7xl sm:rounded-2xl overflow-hidden flex flex-col">
+        {surfaceContent}
       </DrawerContent>
     </Drawer>
   )

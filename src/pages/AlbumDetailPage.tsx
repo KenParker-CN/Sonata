@@ -243,7 +243,8 @@ export default function AlbumDetailPage({
 
       {/* Back button */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate('/albums')}
+        aria-label="Back to albums"
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft size={16} />
@@ -303,8 +304,9 @@ export default function AlbumDetailPage({
         {discGroups.map((discGroup, discGroupIdx) => (
           <div key={discGroup.discNumber} className={discGroupIdx > 0 ? 'mt-8' : ''}>
             {/* Disc header */}
-            <div className="mb-3">
-              <h2 className="text-sm text-muted-foreground">Disc {discGroup.discNumber}</h2>
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <span className="h-px w-4 bg-border" aria-hidden="true" />
+              <h2 className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/65">Disc {discGroup.discNumber}</h2>
             </div>
 
             {/* Work groups for this disc */}

@@ -5,7 +5,7 @@ import type { Lyrics, LyricLine, LyricWord } from '@/types/music'
  * Returns null if the format is invalid.
  */
 function parseTime(timeStr: string): number | null {
-  const match = timeStr.match(/^\[(\d{2}):(\d{2})(?:\.(\d+))?\]/)
+  const match = timeStr.match(/^[\[<](\d{2}):(\d{2})(?:\.(\d+))?[\]>]/)
   if (!match) return null
 
   const minutes = parseInt(match[1], 10)
@@ -30,7 +30,7 @@ function parseTime(timeStr: string): number | null {
  */
 function parseLrcLine(line: string): LyricLine | null {
   // Find all timestamps in the line
-  const timestampRegex = /\[\d{2}:\d{2}(?:\.\d+)?\]/g
+  const timestampRegex = /[\[<]\d{2}:\d{2}(?:\.\d+)?[\]>]/g
   const timestamps = [...line.matchAll(timestampRegex)]
 
   if (timestamps.length === 0) {
@@ -164,7 +164,7 @@ export function parsePlainTextLyrics(text: string): Lyrics | null {
  * Detect if a string contains LRC-style timestamps.
  */
 export function isLrcFormat(content: string): boolean {
-  return /\[\d{2}:\d{2}(?:\.\d+)?\]/.test(content)
+  return /[\[<]\d{2}:\d{2}(?:\.\d+)?[\]>]/.test(content)
 }
 
 /**

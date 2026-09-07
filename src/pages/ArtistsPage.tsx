@@ -1,6 +1,7 @@
 import type { Track } from '@/types/music'
 import { groupArtists } from '@/utils/groupArtists'
-import { Users, Menu } from 'lucide-react'
+import { Users, Menu, ArrowUpDown } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ContextMenu,
@@ -28,7 +29,15 @@ export default function ArtistsPage({
   onOpenSidebar 
 }: ArtistsPageProps) {
   const navigate = useNavigate()
-  const artists = groupArtists(tracks)
+  const [sortBy, setSortBy] = useState<'name' | 'mostTracks' | 'fewestTracks'>('name')
+  const artists = useMemo(() => {
+    const groupedArtists = groupArtists(tracks)
+    return groupedArtists.sort((a, b) => {
+      if (sortBy === 'mostTracks') return b.trackCount - a.trackCount || a.name.localeCompare(b.name)
+      if (sortBy === 'fewestTracks') return a.trackCount - b.trackCount || a.name.localeCompare(b.name)
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    })
+  }, [tracks, sortBy])
 
   return (
     <>
@@ -37,7 +46,8 @@ export default function ArtistsPage({
         {/* Mobile menu button */}
         <button
           onClick={onOpenSidebar}
-          className="lg:hidden absolute top-4 right-4 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Open navigation"
+          className="lg:hidden absolute top-4 right-4 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Menu size={20} />
         </button>
@@ -53,7 +63,25 @@ export default function ArtistsPage({
             <p className="text-sm mt-1">Click "Add Music" to import your library</p>
           </div>
         ) : (
-          <div
+          <>
+            <div className="mb-5 flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+              <p className="text-xs text-muted-foreground">{artists.length} {artists.length === 1 ? 'artist' : 'artists'}</p>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <ArrowUpDown size={14} aria-hidden="true" />
+                <span className="sr-only">Sort artists by</span>
+                <select
+                  value={sortBy}
+                  onChange={event => setSortBy(event.target.value as typeof sortBy)}
+                  aria-label="Sort artists by"
+                  className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
+                >
+                  <option value="name">Name</option>
+                  <option value="mostTracks">Most tracks</option>
+                  <option value="fewestTracks">Fewest tracks</option>
+                </select>
+              </label>
+            </div>
+            <div
             className="grid gap-6"
             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}
           >
@@ -107,7 +135,8 @@ export default function ArtistsPage({
                 </ContextMenuContent>
               </ContextMenu>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </>

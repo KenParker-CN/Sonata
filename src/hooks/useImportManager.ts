@@ -66,38 +66,59 @@ export function useImportManager(onTracksParsed: (tracks: Track[]) => void): Use
       failureCount: 0,
     })
 
-    // Create an array to hold parsed tracks with their original indices
+    // Limit concurrent metadata parsing to avoid saturating the browser's main thread and memory.
     const indexedResults: Array<{ index: number; track: Track | null }> = new Array(audioFiles.length).fill(null)
-    
-    // Process files concurrently but preserve original order
-    const parsePromises = audioFiles.map(async (file, originalIndex) => {
-      try {
-        const track = await parseTrackFile(file)
-        indexedResults[originalIndex] = { index: originalIndex, track }
-        
-        // Update progress for completed file
-        setProgress(prev => ({
-          ...prev,
-          current: prev.current + 1,
-          currentFile: file.name,
-          successCount: prev.successCount + 1,
-        }))
-      } catch (error) {
-        console.error(`Failed to parse file: ${file.name}`, error)
-        indexedResults[originalIndex] = { index: originalIndex, track: null }
-        
-        // Update progress for failed file
-        setProgress(prev => ({
-          ...prev,
-          current: prev.current + 1,
-          currentFile: file.name,
-          failureCount: prev.failureCount + 1,
-        }))
-      }
-    })
+    const concurrency = Math.min(4, audioFiles.length)
+    let nextIndex = 0
+    let completed = 0
+    let successCount = 0
+    let failureCount = 0
+    let lastProgressCount = 0
+    let lastProgressTime = 0
 
-    // Wait for all parsing to complete
-    await Promise.all(parsePromises)
+    const updateProgress = (currentFile: string) => {
+      completed += 1
+      const now = Date.now()
+      const shouldRender =
+        completed === audioFiles.length ||
+        completed - lastProgressCount >= 8 ||
+        now - lastProgressTime >= 100
+
+      if (shouldRender) {
+        lastProgressCount = completed
+        lastProgressTime = now
+        setProgress({
+          status: 'importing',
+          current: completed,
+          total: audioFiles.length,
+          currentFile,
+          successCount,
+          failureCount,
+        })
+      }
+    }
+
+    const parseWorker = async () => {
+      while (nextIndex < audioFiles.length) {
+        const originalIndex = nextIndex
+        nextIndex += 1
+        const file = audioFiles[originalIndex]
+
+        try {
+          const track = await parseTrackFile(file)
+          indexedResults[originalIndex] = { index: originalIndex, track }
+          successCount += 1
+        } catch (error) {
+          console.error(`Failed to parse file: ${file.name}`, error)
+          indexedResults[originalIndex] = { index: originalIndex, track: null }
+          failureCount += 1
+        }
+
+        updateProgress(file.name)
+      }
+    }
+
+    await Promise.all(Array.from({ length: concurrency }, parseWorker))
 
     // Filter out failed parses and sort by original index to restore FileList order
     const newTracks = indexedResults
