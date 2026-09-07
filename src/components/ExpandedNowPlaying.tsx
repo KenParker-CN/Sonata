@@ -11,6 +11,11 @@ import {
   DrawerContent,
   DrawerTitle,
 } from '@/components/ui/Drawer'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import LyricsControls from '@/components/LyricsControls'
 import { Play, Pause, SkipBack, SkipForward, X, Disc3 } from 'lucide-react'
 import { useEffect, useRef, useState, useCallback } from 'react'
@@ -191,10 +196,20 @@ export default function ExpandedNowPlaying({
     }
   }, [activeLineCount, firstActiveLineIndex, track?.lyrics?.lines.length])
 
-  return (
-    <Drawer open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DrawerContent className="mx-auto h-[100dvh] w-full rounded-none border-none bg-background p-0 shadow-2xl sm:h-[92vh] sm:w-[96vw] sm:max-w-7xl sm:rounded-2xl overflow-hidden flex flex-col">
-        <DrawerTitle className="sr-only">Now Playing</DrawerTitle>
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const updateViewport = () => setIsDesktop(mediaQuery.matches)
+    updateViewport()
+    mediaQuery.addEventListener('change', updateViewport)
+    return () => mediaQuery.removeEventListener('change', updateViewport)
+  }, [])
+
+  const surfaceContent = (
+    <>
+      <DrawerTitle className="sr-only">Now Playing</DrawerTitle>
+      <DialogTitle className="sr-only">Now Playing</DialogTitle>
         <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             <Disc3 size={15} className="text-primary" />
@@ -454,6 +469,19 @@ export default function ExpandedNowPlaying({
             </div>
           </div>
         </div>
+    </>
+  )
+
+  return isDesktop ? (
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DialogContent className="h-[min(860px,calc(100dvh-48px))] w-[min(1200px,calc(100vw-48px))] max-w-none gap-0 overflow-hidden rounded-2xl border-border/70 bg-background p-0 shadow-2xl [&>button]:hidden">
+        {surfaceContent}
+      </DialogContent>
+    </Dialog>
+  ) : (
+    <Drawer open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DrawerContent className="mx-auto h-[100dvh] w-full rounded-none border-none bg-background p-0 shadow-2xl sm:h-[92vh] sm:w-[96vw] sm:max-w-7xl sm:rounded-2xl overflow-hidden flex flex-col">
+        {surfaceContent}
       </DrawerContent>
     </Drawer>
   )
