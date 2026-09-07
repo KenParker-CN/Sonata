@@ -1,6 +1,7 @@
 import type { Track } from '@/types/music'
 import TrackList from '@/components/TrackList'
-import { LibraryBig, Menu, Plus } from 'lucide-react'
+import { LibraryBig, Menu, Plus, ArrowUpDown } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 interface LibraryPageProps {
@@ -29,7 +30,18 @@ export default function LibraryPage({
   onOpenSidebar
 }: LibraryPageProps) {
   const navigate = useNavigate()
-  
+  const [sortBy, setSortBy] = useState<'title' | 'artist' | 'album' | 'duration'>('title')
+  const sortedTracks = useMemo(() => {
+    return [...tracks].sort((a, b) => {
+      if (sortBy === 'duration') return b.duration - a.duration
+      const left = sortBy === 'title' ? a.title : sortBy === 'artist' ? a.artist : a.album
+      const right = sortBy === 'title' ? b.title : sortBy === 'artist' ? b.artist : b.album
+      return left.localeCompare(right, undefined, { sensitivity: 'base' })
+    })
+  }, [tracks, sortBy])
+  const currentTrackId = tracks[currentIndex]?.id
+  const sortedCurrentIndex = sortedTracks.findIndex(track => track.id === currentTrackId)
+
   return (
     <>
       {/* Page header */}
@@ -71,10 +83,32 @@ export default function LibraryPage({
             </div>
           </div>
         ) : (
-          <TrackList
-            tracks={tracks}
-            currentIndex={currentIndex}
-            onTrackSelect={onTrackSelect}
+          <>
+            <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+              <p className="text-xs text-muted-foreground">{tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}</p>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <ArrowUpDown size={14} aria-hidden="true" />
+                <span className="sr-only">Sort tracks by</span>
+                <select
+                  value={sortBy}
+                  onChange={event => setSortBy(event.target.value as typeof sortBy)}
+                  aria-label="Sort tracks by"
+                  className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
+                >
+                  <option value="title">Title</option>
+                  <option value="artist">Artist</option>
+                  <option value="album">Album</option>
+                  <option value="duration">Longest first</option>
+                </select>
+              </label>
+            </div>
+            <TrackList
+            tracks={sortedTracks}
+            currentIndex={sortedCurrentIndex}
+            onTrackSelect={index => {
+              const originalIndex = tracks.findIndex(track => track.id === sortedTracks[index].id)
+              if (originalIndex >= 0) onTrackSelect(originalIndex)
+            }}
             onArtistClick={(artistName) => navigate(`/artists/${encodeURIComponent(artistName)}`)}
             onAlbumClick={(album) => navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)}
             onPlayNext={onPlayNext}
@@ -82,7 +116,8 @@ export default function LibraryPage({
             onGoToAlbum={onGoToAlbum}
             onGoToArtist={onGoToArtist}
             onRemoveFromLibrary={onRemoveFromLibrary}
-          />
+            />
+          </>
         )}
       </div>
     </>
