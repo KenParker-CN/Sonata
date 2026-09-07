@@ -1,5 +1,6 @@
-import type { RepeatMode } from '@/types/music'
+import type { RepeatMode, Track } from '@/types/music'
 import { formatTime } from '@/utils/formatTime'
+import { parseArtists } from '@/utils/parseArtists'
 import {
   SkipBack,
   Play,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 
 interface PlayerBarProps {
+  track: Track | null
   hasTrack: boolean
   isPlaying: boolean
   repeatMode: RepeatMode
@@ -32,6 +34,7 @@ interface PlayerBarProps {
 }
 
 export default function PlayerBar({
+  track,
   hasTrack,
   isPlaying,
   repeatMode,
@@ -51,6 +54,25 @@ export default function PlayerBar({
 }: PlayerBarProps) {
   return (
     <div className="h-[104px] sm:h-[92px] shrink-0 bg-player border-t border-player-border flex items-center px-2 sm:px-5 gap-2 sm:gap-5 shadow-sm">
+      {/* Current track — informational only; Now Playing is no longer interactive */}
+      <div className="flex w-[140px] shrink-0 items-center gap-2 min-w-0 sm:w-[240px] sm:gap-3">
+        {track?.cover ? (
+          <img src={track.cover} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover sm:h-11 sm:w-11" />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground sm:h-11 sm:w-11">
+            <Play size={15} />
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium text-foreground sm:text-sm">
+            {track?.title ?? 'No track selected'}
+          </p>
+          <p className="truncate text-[10px] text-muted-foreground sm:text-xs">
+            {track?.artist ? parseArtists(track.artist).join(', ') : 'No artist'}
+          </p>
+        </div>
+      </div>
+
       {/* Center: Controls + progress */}
       <div className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 min-w-0">
         {/* Transport controls */}

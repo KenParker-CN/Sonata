@@ -484,6 +484,7 @@ function App() {
 
       {/* PlayerBar is outside the page switch — it persists across navigation */}
       <PlayerBar
+        track={currentTrack}
         hasTrack={Boolean(currentTrack)}
         isPlaying={isPlaying}
         repeatMode={repeatMode}
