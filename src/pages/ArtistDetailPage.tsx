@@ -158,6 +158,7 @@ export default function ArtistDetailPage({
                           onGoToAlbum={onGoToAlbum}
                           onGoToArtist={onGoToArtist}
                           onRemoveFromLibrary={onRemoveFromLibrary}
+                          showQualityBadge={false}
                         />
                       )
                     })}

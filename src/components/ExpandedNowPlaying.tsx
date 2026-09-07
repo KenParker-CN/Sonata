@@ -176,17 +176,12 @@ export default function ExpandedNowPlaying({
       const containerHeight = container.clientHeight
       const lineHeight = element.offsetHeight || 32 // approximate line height
       
-      // Estimate how many lines fit in viewport (with some margin)
-      const linesInViewport = Math.floor(containerHeight / lineHeight) - 1
-      
-      // Check if we're near the end: remaining lines <= lines that fit in viewport
-      const totalLines = track?.lyrics?.lines.length || 0
-      const remainingLines = totalLines - firstActiveIndex
-      const isNearEnd = remainingLines <= linesInViewport
-      
-      element.scrollIntoView({
+     
+      const targetTop = element.offsetTop - containerHeight / 2 + lineHeight / 2
+      const maxScrollTop = container.scrollHeight - container.clientHeight
+      container.scrollTo({
+        top: Math.max(0, Math.min(targetTop, maxScrollTop)),
         behavior: 'smooth',
-        block: isNearEnd ? 'end' : 'center',
       })
     }
   }, [activeLineIndices, track?.lyrics?.lines.length])
@@ -327,7 +322,7 @@ export default function ExpandedNowPlaying({
               
               <div 
                 ref={lyricsContainerRef}
-                className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-3 scrollbar-hide sm:pr-5"
+                className="h-[min(46svh,420px)] min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-3 scrollbar-hide sm:pr-5 lg:h-auto"
                 style={{ fontSize: `${currentFontSize}rem` }}
               >
                 {track?.lyrics && track.lyrics.lines.length > 0 ? (
