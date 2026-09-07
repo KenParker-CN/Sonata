@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(240 10% 3.9%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(240 10% 3.9%);
+  --color-muted: hsl(240 4.8% 95.9%);
+  --color-muted-foreground: hsl(240 3.8% 46.1%);
+  --color-border: hsl(240 5.9% 90%);
+  --color-accent: hsl(240 4.8% 95.9%);
+  --color-accent-foreground: hsl(240 5.9% 10%);
+  --color-primary: hsl(240 5.9% 10%);
+  --color-primary-foreground: hsl(0 0% 98%);
+  --color-sidebar: hsl(0 0% 98%);
+  --color-sidebar-foreground: hsl(240 10% 3.9%);
+  --color-sidebar-border: hsl(240 5.9% 92%);
+  --color-player: hsl(0 0% 100%);
+  --color-player-border: hsl(240 5.9% 90%);
+  --color-ring: hsl(240 5.9% 10%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(240 10% 3.9%);
+
+  --radius-lg: 8px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  --animate-marquee: marquee 10s linear infinite;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+/* MASTER quality badge — reads as a metal nameplate on high-end audio gear:
+   a tight gold gradient, one crisp specular edge on top, and a fine light band
+   that wipes across on a long idle cycle. Deliberately no glow or heavy shadow. */
+.badge-master {
+  background-image: linear-gradient(
+    178deg,
+    hsl(45 88% 67%) 0%,
+    hsl(42 85% 56%) 48%,
+    hsl(38 80% 47%) 100%
+  );
+  color: hsl(32 65% 14%);
+  box-shadow:
+    inset 0 1px 0 hsl(48 100% 90% / 0.75),
+    inset 0 -1px 0 hsl(32 70% 30% / 0.4),
+    0 1px 1.5px hsl(0 0% 0% / 0.16);
+}
+
+@keyframes badge-sheen {
+  0% {
+    transform: translateX(-180%) skewX(-20deg);
+  }
+
+  /* 5 / 7 ≈ 71.4% */
+  71.4% {
+    transform: translateX(700%) skewX(-20deg);
+  }
+
+  100% {
+    transform: translateX(700%) skewX(-20deg);
+  }
+}
+
+.badge-master-sheen {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: 0;
+  width: 18%;
+
+  background-image: linear-gradient(
+          90deg,
+          transparent 0%,
+          hsl(0 0% 100% / 0.2) 42%,
+          hsl(0 0% 100% / 0.85) 50%,
+          hsl(0 0% 100% / 0.2) 58%,
+          transparent 100%
+  );
+
+  transform: translateX(-180%) skewX(-20deg);
+
+  animation: badge-sheen 7s linear infinite;
+
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-master-sheen {
+    animation: none;
+  }
+}
+
+/* Dark mode — follows system preference */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: hsl(240 10% 3.9%);
+    --color-foreground: hsl(0 0% 98%);
+    --color-card: hsl(240 10% 3.9%);
+    --color-card-foreground: hsl(0 0% 98%);
+    --color-muted: hsl(240 3.7% 15.9%);
+    --color-muted-foreground: hsl(240 5% 64.9%);
+    --color-border: hsl(240 3.7% 15.9%);
+    --color-accent: hsl(240 3.7% 15.9%);
+    --color-accent-foreground: hsl(0 0% 98%);
+    --color-primary: hsl(0 0% 98%);
+    --color-primary-foreground: hsl(240 5.9% 10%);
+    --color-sidebar: hsl(240 5.9% 7%);
+    --color-sidebar-foreground: hsl(0 0% 98%);
+    --color-sidebar-border: hsl(240 3.7% 15.9%);
+    --color-player: hsl(240 10% 5.5%);
+    --color-player-border: hsl(240 3.7% 15.9%);
+    --color-ring: hsl(240 4.9% 83.9%);
+    --color-popover: hsl(240 10% 3.9%);
+    --color-popover-foreground: hsl(0 0% 98%);
+  }
+}
+
+/* Base resets */
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Full-height root — App Shell fills the viewport */
+#root {
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Range input (progress bar + volume slider) — themed track and thumb */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-foreground);
+  margin-top: -5px;
+  border: none;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-foreground);
+  border: none;
+}
+
+/* Progress bar — filled portion uses primary color via --range-fill CSS variable */
+input[type="range"].progress-bar::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--color-primary) var(--range-fill, 0%),
+    var(--color-border) var(--range-fill, 0%)
+  );
+}
+
+input[type="range"].progress-bar::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    var(--color-primary) var(--range-fill, 0%),
+    var(--color-border) var(--range-fill, 0%)
+  );
+}
+
+/* Vertical slider — used for volume control */
+input[type="range"].vertical-slider {
+  -webkit-appearance: slider-vertical;
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
+input[type="range"].vertical-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+input[type="range"].vertical-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-foreground);
+  margin-left: -5px;
+  border: none;
+}
+
+input[type="range"].vertical-slider.progress-bar::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to top,
+    var(--color-primary) var(--range-fill, 0%),
+    var(--color-border) var(--range-fill, 0%)
+  );
+}
+
+/* Hide scrollbar for horizontal scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
