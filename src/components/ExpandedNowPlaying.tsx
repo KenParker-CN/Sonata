@@ -51,6 +51,8 @@ export default function ExpandedNowPlaying({
   
   // Find active lyric lines (can be multiple with same startTime) and words
   const activeLineIndices = findActiveLyricLines(currentTime, track?.lyrics ?? null)
+  const firstActiveLineIndex = activeLineIndices[0] ?? -1
+  const activeLineCount = activeLineIndices.length
   const activeWordIndices = new Map<number, number>()
   
   // For each active line, find the active word index if it has word-level sync
@@ -164,10 +166,10 @@ export default function ExpandedNowPlaying({
   
   // Auto-scroll active lyric line to center of viewport
   useEffect(() => {
-    if (activeLineIndices.length === 0 || !lyricsContainerRef.current) return
-    
+    if (activeLineCount === 0 || !lyricsContainerRef.current) return
+
     // Use the first active line as the scroll target
-    const firstActiveIndex = activeLineIndices[0]
+    const firstActiveIndex = firstActiveLineIndex
     const element = activeLineRefs.current[firstActiveIndex]
     const container = lyricsContainerRef.current
     
@@ -177,14 +179,17 @@ export default function ExpandedNowPlaying({
       const lineHeight = element.offsetHeight || 32 // approximate line height
       
      
-      const targetTop = element.offsetTop - containerHeight / 2 + lineHeight / 2
+      const elementRect = element.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      const elementTop = elementRect.top - containerRect.top + container.scrollTop
+      const targetTop = elementTop - containerHeight / 2 + lineHeight / 2
       const maxScrollTop = container.scrollHeight - container.clientHeight
       container.scrollTo({
         top: Math.max(0, Math.min(targetTop, maxScrollTop)),
         behavior: 'smooth',
       })
     }
-  }, [activeLineIndices, track?.lyrics?.lines.length])
+  }, [activeLineCount, firstActiveLineIndex, track?.lyrics?.lines.length])
 
   return (
     <Drawer open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
@@ -205,8 +210,8 @@ export default function ExpandedNowPlaying({
           </button>
         </div>
         {/* Main content - two columns: left (artwork + info), right (lyrics) */}
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
-          <div className="grid min-h-full grid-cols-1 gap-8 px-4 py-5 sm:px-8 sm:py-7 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:gap-12 lg:px-12">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:h-full lg:overflow-hidden">
+          <div className="grid min-h-full grid-cols-1 gap-8 px-4 py-5 sm:px-8 sm:py-7 lg:h-full lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:gap-12 lg:px-12">
             {/* Left column: Artwork + Track Info + Technical Info (2/5 width) */}
             <div className="flex flex-col gap-5 lg:min-h-0 lg:overflow-hidden">
               {/* Artwork */}
@@ -301,7 +306,7 @@ export default function ExpandedNowPlaying({
             </div>
 
             {/* Right column: Lyrics (3/5 width) */}
-            <div className="flex min-h-[260px] flex-col overflow-hidden pb-2 lg:min-h-0 lg:pb-5">
+            <div className="flex min-h-[260px] flex-col overflow-hidden pb-2 lg:h-full lg:min-h-0 lg:pb-5">
               {/* Lyrics header with controls */}
               <div className="mb-3 flex shrink-0 items-center justify-between border-b border-border/60 pb-3">
                 <div>
@@ -322,7 +327,7 @@ export default function ExpandedNowPlaying({
               
               <div 
                 ref={lyricsContainerRef}
-                className="h-[min(46svh,420px)] min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-3 scrollbar-hide sm:pr-5 lg:h-auto"
+                className="h-[min(46svh,420px)] min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-3 scrollbar-hide sm:pr-5 lg:h-auto lg:max-h-full"
                 style={{ fontSize: `${currentFontSize}rem` }}
               >
                 {track?.lyrics && track.lyrics.lines.length > 0 ? (
