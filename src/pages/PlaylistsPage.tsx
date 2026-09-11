@@ -66,7 +66,7 @@ export default function PlaylistsPage({
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-4">
+      <div className="px-6 pb-8">
         {playlists.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
             <ListMusic size={40} className="mb-4 opacity-30" />
@@ -95,8 +95,8 @@ export default function PlaylistsPage({
 
             {/* Playlist Grid */}
             <div
-              className="grid gap-5"
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}
+              className="grid gap-6"
+              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}
             >
               {playlists.map(playlist => {
                 const cover = getPlaylistCover(playlist)
@@ -107,7 +107,7 @@ export default function PlaylistsPage({
                     <ContextMenuTrigger asChild>
                       <div className="group relative cursor-pointer">
                         {/* Cover — 1:1 aspect ratio */}
-                        <div className="aspect-square rounded-md overflow-hidden bg-muted mb-2 ring-1 ring-border/50 shadow-sm transition-shadow group-hover:shadow-md">
+                        <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 transition-transform group-hover:scale-[1.02]">
                           {cover ? (
                             <img
                               src={cover}
@@ -122,10 +122,10 @@ export default function PlaylistsPage({
                         </div>
 
                         {/* Playlist info */}
-                        <p className="text-sm font-medium truncate leading-tight">
+                        <p className="text-sm font-semibold truncate leading-snug mb-1">
                           {playlist.name}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        <p className="text-xs text-muted-foreground truncate">
                           {trackCount} {trackCount === 1 ? 'track' : 'tracks'}
                         </p>
                       </div>

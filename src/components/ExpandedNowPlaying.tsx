@@ -421,7 +421,7 @@ export default function ExpandedNowPlaying({
         </div>
 
         {/* Bottom: Playback controls */}
-        <div className="border-t border-border/70 bg-player/80 px-4 py-4 backdrop-blur-xl shrink-0 sm:px-8 sm:py-5">
+        <div className="border-t border-border/70 bg-muted/60 px-4 py-4 backdrop-blur-xl shrink-0 sm:px-8 sm:py-5">
           <div className="mx-auto flex max-w-3xl flex-col gap-3">
             {/* Controls - centered above progress bar */}
             <div className="flex items-center justify-center gap-5">
@@ -438,7 +438,7 @@ export default function ExpandedNowPlaying({
                 onClick={onTogglePlay}
                 disabled={!track}
                 aria-label={isPlaying ? 'Pause' : 'Play'}
-                className="rounded-full bg-primary p-3 text-primary-foreground shadow-sm transition hover:brightness-105 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-full bg-primary p-3 text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
               </button>

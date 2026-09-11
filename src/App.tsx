@@ -431,6 +431,7 @@ function App() {
                 tracks={tracks}
                 currentIndex={currentIndex}
                 onTrackSelect={playTrack}
+                onPlayAlbum={handlePlayAlbum}
                 onOpenSidebar={() => setSidebarOpen(true)}
               />
             </PageWrapper>

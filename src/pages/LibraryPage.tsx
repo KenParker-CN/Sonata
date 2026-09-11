@@ -61,46 +61,48 @@ export default function LibraryPage({
       {/* Content */}
       <div className="px-4 pb-8 sm:px-6">
         {tracks.length === 0 ? (
-          <div className="relative isolate flex min-h-[min(560px,calc(100svh-220px))] items-center justify-center overflow-hidden rounded-2xl border border-border/70 bg-card/45 px-6 py-16 text-center shadow-[inset_0_1px_0_hsl(36_24%_94%_/_0.03)]">
-            <div className="pointer-events-none absolute -right-24 -top-28 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-40 -left-24 -z-10 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
-            <div className="flex max-w-md flex-col items-center">
-              <div className="mb-7 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-[0_0_60px_hsl(38_88%_62%_/_0.12)]">
-                <LibraryBig size={36} strokeWidth={1.4} />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">Your listening room</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Build your music library</h2>
-              <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">Bring your local collection into one calm space for albums, artists, and focused listening.</p>
-              <button
-                type="button"
-                onClick={onImportMusic}
-                className="mt-7 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[0_10px_28px_hsl(38_88%_62%_/_0.16)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                <Plus size={17} />
-                Import music
-              </button>
-              <p className="mt-4 text-xs text-muted-foreground/75">Choose audio files or a folder from your device</p>
+          <div className="flex min-h-[min(560px,calc(100svh-220px))] flex-col items-center justify-center px-6 py-16 text-center">
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+              <LibraryBig size={28} strokeWidth={1.5} />
             </div>
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Build your music library</h2>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+              Bring your local collection into one place for albums, artists, and focused listening.
+            </p>
+            <button
+              type="button"
+              onClick={onImportMusic}
+              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <Plus size={16} />
+              Import music
+            </button>
+            <p className="mt-3 text-xs text-muted-foreground">Choose audio files or a folder from your device</p>
           </div>
         ) : (
           <>
             <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/70 pb-3">
-              <p className="text-xs text-muted-foreground">{tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}</p>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                <ArrowUpDown size={14} aria-hidden="true" />
-                <span className="sr-only">Sort tracks by</span>
-                <select
-                  value={sortBy}
-                  onChange={event => setSortBy(event.target.value as typeof sortBy)}
-                  aria-label="Sort tracks by"
-                  className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
-                >
-                  <option value="title">Title</option>
-                  <option value="artist">Artist</option>
-                  <option value="album">Album</option>
-                  <option value="duration">Longest first</option>
-                </select>
-              </label>
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                All Tracks
+              </h2>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-muted-foreground">{tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}</p>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ArrowUpDown size={14} aria-hidden="true" />
+                  <span className="sr-only">Sort tracks by</span>
+                  <select
+                    value={sortBy}
+                    onChange={event => setSortBy(event.target.value as typeof sortBy)}
+                    aria-label="Sort tracks by"
+                    className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="title">Title</option>
+                    <option value="artist">Artist</option>
+                    <option value="album">Album</option>
+                    <option value="duration">Longest first</option>
+                  </select>
+                </label>
+              </div>
             </div>
             <TrackList
             tracks={sortedTracks}

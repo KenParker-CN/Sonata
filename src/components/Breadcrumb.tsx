@@ -59,19 +59,19 @@ export default function Breadcrumb() {
   }
   
   return (
-    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-4 py-2 text-xs font-mono">
-      <div className="flex items-center gap-1 flex-wrap">
+    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-6 py-2 text-xs">
+      <div className="flex items-center gap-1.5 flex-wrap">
         {breadcrumbTrail.map((item, idx) => (
-          <span key={idx} className="flex items-center gap-1">
-            {idx > 0 && <span className="text-muted-foreground">/</span>}
+          <span key={idx} className="flex items-center gap-1.5">
+            {idx > 0 && <span className="text-muted-foreground/60">›</span>}
             <span
               className={
                 item.isLast
-                  ? 'text-primary font-semibold'
+                  ? 'text-foreground font-medium'
                   : 'text-muted-foreground'
               }
             >
-              {idx + 1}. {item.label}
+              {item.label}
             </span>
           </span>
         ))}

@@ -109,7 +109,7 @@ export default function ArtistDetailPage({
       {/* Profile Section */}
       <div className="flex flex-col sm:flex-row gap-6 mb-8">
         {/* Artist artwork placeholder */}
-        <div className="w-32 h-32 sm:w-48 sm:h-48 shrink-0 rounded-md overflow-hidden bg-muted ring-1 ring-border/50 shadow-md mx-auto sm:mx-0">
+        <div className="w-32 h-32 sm:w-48 sm:h-48 shrink-0 rounded-lg overflow-hidden bg-muted mx-auto sm:mx-0">
           <div className="w-full h-full flex items-center justify-center bg-muted">
             <Users size={32} className="sm:w-[48px] sm:h-[48px] text-muted-foreground/30" />
           </div>
@@ -133,7 +133,7 @@ export default function ArtistDetailPage({
           <section>
             <div className="overflow-hidden mb-4">
               <h2 
-                className="text-xl font-semibold whitespace-nowrap hover:animate-marquee cursor-default inline-block"
+                className="text-lg font-semibold tracking-tight whitespace-nowrap hover:animate-marquee cursor-default inline-block"
                 style={{ maxWidth: '100%' }}
               >
                 Popular Tracks
@@ -173,17 +173,17 @@ export default function ArtistDetailPage({
         {/* Albums Section */}
         {albums.length > 0 && (
           <section>
-            <h2 className="text-xl font-semibold mb-4">Albums</h2>
+            <h2 className="text-lg font-semibold tracking-tight mb-4">Albums</h2>
             <Shelf>
-              <div className="flex gap-5 pb-2 px-1">
+              <div className="flex gap-6 pb-2 px-1">
                 {albums.map(album => (
                   <div
                     key={`${album.name}::${album.albumArtist}`}
-                    className="group cursor-pointer shrink-0 w-[170px]"
+                    className="group cursor-pointer shrink-0 snap-start w-[220px]"
                     onClick={() => navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)}
                   >
                     {/* Cover — 1:1 aspect ratio */}
-                    <div className="aspect-square rounded-md overflow-hidden bg-muted mb-2 ring-1 ring-border/50 shadow-sm transition-shadow group-hover:shadow-md">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 transition-transform group-hover:scale-[1.02]">
                       {album.cover ? (
                         <img
                           src={album.cover}
@@ -198,10 +198,10 @@ export default function ArtistDetailPage({
                     </div>
 
                     {/* Album info */}
-                    <p className="text-sm font-medium truncate leading-tight">
+                    <p className="text-sm font-semibold truncate leading-snug mb-1">
                       {album.name}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <p className="text-xs text-muted-foreground truncate">
                       {parseArtists(album.albumArtist).map((artist, idx) => (
                         <span key={idx}>
                           <button
@@ -227,17 +227,17 @@ export default function ArtistDetailPage({
         {/* Appears On Section */}
         {appearsOn.length > 0 && (
           <section>
-            <h2 className="text-xl font-semibold mb-4">Appears On</h2>
+            <h2 className="text-lg font-semibold tracking-tight mb-4">Appears On</h2>
             <Shelf>
-              <div className="flex gap-5 pb-2 px-1">
+              <div className="flex gap-6 pb-2 px-1">
                 {appearsOn.map(album => (
                   <div
                     key={`${album.name}::${album.albumArtist}`}
-                    className="group cursor-pointer shrink-0 w-[170px]"
+                    className="group cursor-pointer shrink-0 snap-start w-[220px]"
                     onClick={() => navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)}
                   >
                     {/* Cover — 1:1 aspect ratio */}
-                    <div className="aspect-square rounded-md overflow-hidden bg-muted mb-2 ring-1 ring-border/50 shadow-sm transition-shadow group-hover:shadow-md">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 transition-transform group-hover:scale-[1.02]">
                       {album.cover ? (
                         <img
                           src={album.cover}
@@ -252,10 +252,10 @@ export default function ArtistDetailPage({
                     </div>
 
                     {/* Album info */}
-                    <p className="text-sm font-medium truncate leading-tight">
+                    <p className="text-sm font-semibold truncate leading-snug mb-1">
                       {album.name}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <p className="text-xs text-muted-foreground truncate">
                       {parseArtists(album.albumArtist).map((artist, idx) => (
                         <span key={idx}>
                           <button

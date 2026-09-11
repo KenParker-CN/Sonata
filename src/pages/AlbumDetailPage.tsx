@@ -2,9 +2,10 @@ import type { Track } from '@/types/music'
 import { parseClassicalTitle } from '@/utils/parseClassicalTitle'
 import { parseArtists } from '@/utils/parseArtists'
 import { formatTime, formatDurationLong } from '@/utils/formatTime'
-import { ArrowLeft, Disc3, Play, SkipForward, SkipBack, ListMusic, Menu } from 'lucide-react'
+import { ArrowLeft, Disc3, Play, SkipForward, SkipBack, ListMusic, Menu, MoreHorizontal, ChevronUp, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -13,12 +14,13 @@ import {
   ContextMenuSeparator,
 } from '@/components/ui/ContextMenu'
 import AudioQualityBadge from '@/components/AudioQualityBadge'
-import { getAudioQualityBadge, getAlbumQualityBadge } from '@/utils/getAudioQualityBadge'
+import { getAlbumQualityBadge } from '@/utils/getAudioQualityBadge'
 
 interface AlbumDetailPageProps {
   tracks: Track[]
   currentIndex: number
   onTrackSelect: (index: number) => void
+  onPlayAlbum?: (albumName: string, albumArtist: string) => void
   onOpenSidebar?: () => void
 }
 
@@ -169,6 +171,7 @@ export default function AlbumDetailPage({
   tracks,
   currentIndex,
   onTrackSelect,
+  onPlayAlbum,
   onOpenSidebar,
 }: AlbumDetailPageProps) {
   const navigate = useNavigate()
@@ -213,6 +216,9 @@ export default function AlbumDetailPage({
     })
   }
 
+  // Which work's "…" menu is open (controlled so the button can open it on click)
+  const [openWorkMenuKey, setOpenWorkMenuKey] = useState<string | null>(null)
+
   if (albumTracks.length === 0) {
     return (
       <div className="px-6 pt-6">
@@ -254,7 +260,7 @@ export default function AlbumDetailPage({
       {/* Album header */}
       <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
         {/* Cover */}
-        <div className="w-40 h-40 sm:w-64 sm:h-64 shrink-0 rounded-md overflow-hidden bg-muted ring-1 ring-border/50 shadow-md mx-auto sm:mx-0">
+        <div className="w-40 h-40 sm:w-64 sm:h-64 shrink-0 rounded-lg overflow-hidden bg-muted mx-auto sm:mx-0">
           {cover ? (
             <img src={cover} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -296,6 +302,18 @@ export default function AlbumDetailPage({
               {albumTracks.length} {albumTracks.length === 1 ? 'track' : 'tracks'} · {formatDurationLong(albumDuration)}
             </span>
           </div>
+          {onPlayAlbum && (
+            <div className="flex justify-center sm:justify-start pt-1">
+              <button
+                type="button"
+                onClick={() => onPlayAlbum(album.name, album.albumArtist)}
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Play size={15} fill="currentColor" />
+                Play
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -327,59 +345,56 @@ export default function AlbumDetailPage({
                           <ContextMenuTrigger asChild>
                             <div
                               onClick={() => onTrackSelect(entry.trackIndex)}
-                              className={`w-full flex items-center gap-1.5 pl-0 pr-3 py-2 rounded-md text-left hover:bg-accent transition-colors cursor-pointer ${
-                                isActive ? 'bg-accent' : ''
-                              }`}
+                              className={cn(
+                                'w-full flex items-center gap-3 pr-3 py-2 rounded-md text-left transition-colors cursor-pointer',
+                                isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                              )}
                             >
-                              <span className="text-sm text-muted-foreground tabular-nums shrink-0 whitespace-nowrap">
+                              <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                                 {track.trackNumber != null && track.trackNumber > 0 
                                   ? String(track.trackNumber).padStart(2, '0') 
                                   : ''}
                               </span>
-                              <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                                {/* Fixed-width column aligns titles; the badge inside stays content-sized */}
-                                <span className="flex w-14 shrink-0 items-center justify-center">
-                                  <AudioQualityBadge badge={getAudioQualityBadge(track)} />
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <p
-                                    className={`text-sm truncate ${
-                                      isActive ? 'text-primary font-medium' : ''
-                                    }`}
-                                  >
-                                    {track.title}
-                                  </p>
-                                  {(() => {
-                                    const trackArtists = parseArtists(track.artist || '').filter(a => a.length > 0)
+                              <div className="min-w-0 flex-1">
+                                <p className={cn('text-sm truncate', isActive && 'font-medium')}>
+                                  {track.title}
+                                </p>
+                                {(() => {
+                                  const trackArtists = parseArtists(track.artist || '').filter(a => a.length > 0)
+                                  const albumArtists = parseArtists(album.albumArtist)
 
-                                    if (trackArtists.length > 0) {
-                                      return (
-                                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                          {trackArtists.map((artist, idx) => (
-                                            <span key={idx}>
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation()
-                                                  navigate(`/artists/${encodeURIComponent(artist)}`)
-                                                }}
-                                                onContextMenu={(e) => {
-                                                  e.stopPropagation()
-                                                }}
-                                                className="hover:text-foreground transition-colors"
-                                              >
-                                                {artist}
-                                              </button>
-                                              {idx < trackArtists.length - 1 && ', '}
-                                            </span>
-                                          ))}
-                                        </p>
-                                      )
-                                    }
-                                    return null
-                                  })()}
-                                </div>
+                                  // The album artist is already in the header — only name
+                                  // performers that differ from it.
+                                  if (
+                                    trackArtists.length > 0 &&
+                                    trackArtists.join(', ') !== albumArtists.join(', ')
+                                  ) {
+                                    return (
+                                      <p className={cn('text-xs truncate mt-0.5', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                                        {trackArtists.map((artist, idx) => (
+                                          <span key={idx}>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                navigate(`/artists/${encodeURIComponent(artist)}`)
+                                              }}
+                                              onContextMenu={(e) => {
+                                                e.stopPropagation()
+                                              }}
+                                              className={cn('transition-colors', isActive ? 'hover:text-primary-foreground' : 'hover:text-foreground')}
+                                            >
+                                              {artist}
+                                            </button>
+                                            {idx < trackArtists.length - 1 && ', '}
+                                          </span>
+                                        ))}
+                                      </p>
+                                    )
+                                  }
+                                  return null
+                                })()}
                               </div>
-                              <span className="text-sm text-muted-foreground tabular-nums shrink-0 whitespace-nowrap">
+                              <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                                 {formatTime(track.duration)}
                               </span>
                             </div>
@@ -411,12 +426,14 @@ export default function AlbumDetailPage({
               }
 
               // Classical work with movements
+              const groupKey = `${discGroup.discNumber}-${groupIdx}`
+              const isExpanded = expandedGroups.has(groupKey)
               return (
                 <div key={groupIdx} className="mb-4">
-                  {/* Work header — clickable to toggle expand/collapse */}
+                  {/* Work header — clicking the row toggles expand/collapse */}
                   <div
                     onClick={() => toggleGroup(discGroup.discNumber, groupIdx)}
-                    className="w-full flex items-center gap-4 pl-0 pr-3 py-2 rounded-md text-left hover:bg-accent transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2 pr-3 py-2 rounded-md text-left hover:bg-accent transition-colors cursor-pointer"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">{group.work}</p>
@@ -424,7 +441,7 @@ export default function AlbumDetailPage({
                       {(() => {
                         // Use albumArtist from the first track in the group
                         const firstTrack = tracks[group.entries[0].trackIndex]
-                        const allArtists = parseArtists(firstTrack.albumArtist || '').filter(a => a.length > 0)
+                        const allArtists = parseArtists(firstTrack.artist || '').filter(a => a.length > 0)
                         if (allArtists.length > 0) {
                           return (
                             <p className="text-xs text-muted-foreground truncate mt-0.5">
@@ -451,8 +468,8 @@ export default function AlbumDetailPage({
                         return null
                       })()}
                     </div>
-                    {/* Total duration on the right */}
-                    <span className="shrink-0 flex items-center text-muted-foreground text-sm">
+                    {/* Total duration + work actions on the right */}
+                    <span className="shrink-0 flex items-center gap-1 text-muted-foreground text-sm">
                       {(() => {
                         const totalDuration = group.entries.reduce(
                           (sum, entry) => sum + (tracks[entry.trackIndex].duration || 0),
@@ -460,11 +477,41 @@ export default function AlbumDetailPage({
                         )
                         return formatTime(totalDuration)
                       })()}
+                      <ContextMenu
+                        open={openWorkMenuKey === groupKey}
+                        onOpenChange={open => setOpenWorkMenuKey(open ? groupKey : null)}
+                      >
+                        <ContextMenuTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`Actions for ${group.work}`}
+                            onClick={e => {
+                              e.stopPropagation()
+                              setOpenWorkMenuKey(groupKey)
+                            }}
+                            className="p-1 rounded-md hover:text-foreground transition-colors"
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-56">
+                          <ContextMenuItem onClick={() => onTrackSelect(group.entries[0].trackIndex)}>
+                            <Play className="mr-2 h-4 w-4" />
+                            Play Work
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => toggleGroup(discGroup.discNumber, groupIdx)}>
+                            {isExpanded
+                              ? <ChevronDown className="mr-2 h-4 w-4" />
+                              : <ChevronUp className="mr-2 h-4 w-4" />}
+                            {isExpanded ? 'Collapse Movements' : 'Expand Movements'}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     </span>
                   </div>
 
                   {/* Movement rows - only show if expanded */}
-                  {expandedGroups.has(`${discGroup.discNumber}-${groupIdx}`) && (
+                  {isExpanded && (
                     <>
                       {group.entries.map((entry, entryIdx) => {
                         const track = tracks[entry.trackIndex]
@@ -483,57 +530,18 @@ export default function AlbumDetailPage({
                             <ContextMenuTrigger asChild>
                               <div
                                 onClick={() => onTrackSelect(entry.trackIndex)}
-                                className={`w-full flex items-center gap-1.5 pl-0 pr-3 py-1.5 rounded-md text-left hover:bg-accent transition-colors cursor-pointer ${
-                                  isActive ? 'bg-accent' : ''
-                                }`}
+                                className={cn(
+                                  'w-full flex items-center gap-3 pr-3 py-1.5 rounded-md text-left transition-colors cursor-pointer',
+                                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                                )}
                               >
-                                <span className="text-sm text-muted-foreground tabular-nums shrink-0 whitespace-nowrap">
+                                <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                                   {String(sequentialNumber).padStart(2, '0')}
                                 </span>
-                                <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                                  {/* Fixed-width column aligns titles; the badge inside stays content-sized */}
-                                  <span className="flex w-14 shrink-0 items-center justify-center">
-                                    <AudioQualityBadge badge={getAudioQualityBadge(track)} />
-                                  </span>
-                                  <div className="min-w-0 flex-1">
-                                    <p
-                                      className={`text-sm truncate ${
-                                        isActive ? 'text-primary font-medium' : ''
-                                      }`}
-                                    >
-                                      {movementLabel}
-                                    </p>
-                                    {(() => {
-                                      const trackArtists = parseArtists(track.artist || '').filter(a => a.length > 0)
-
-                                      if (trackArtists.length > 0) {
-                                        return (
-                                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                            {trackArtists.map((artist, idx) => (
-                                              <span key={idx}>
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    navigate(`/artists/${encodeURIComponent(artist)}`)
-                                                  }}
-                                                  onContextMenu={(e) => {
-                                                    e.stopPropagation()
-                                                  }}
-                                                  className="hover:text-foreground transition-colors"
-                                                >
-                                                  {artist}
-                                                </button>
-                                                {idx < trackArtists.length - 1 && ', '}
-                                              </span>
-                                            ))}
-                                          </p>
-                                        )
-                                      }
-                                      return null
-                                    })()}
-                                  </div>
-                                </div>
-                                <span className="text-sm text-muted-foreground tabular-nums shrink-0 whitespace-nowrap">
+                                <p className={cn('min-w-0 flex-1 text-sm truncate', isActive && 'font-medium')}>
+                                  {movementLabel}
+                                </p>
+                                <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                                   {formatTime(track.duration)}
                                 </span>
                               </div>

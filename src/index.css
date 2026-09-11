@@ -1,27 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(36 30% 98%);
-  --color-foreground: hsl(232 22% 18%);
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(240 6% 10%);
   --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(232 22% 18%);
-  --color-muted: hsl(230 20% 96%);
-  --color-muted-foreground: hsl(230 10% 48%);
-  --color-border: hsl(230 18% 90%);
-  --color-accent: hsl(252 55% 96%);
-  --color-accent-foreground: hsl(258 40% 38%);
-  --color-primary: hsl(258 48% 56%);
+  --color-card-foreground: hsl(240 6% 10%);
+  --color-muted: hsl(240 5% 96%);
+  --color-muted-foreground: hsl(240 4% 45%);
+  --color-border: hsl(240 6% 90%);
+  --color-accent: hsl(240 5% 94%);
+  --color-accent-foreground: hsl(240 6% 12%);
+  --color-primary: hsl(240 6% 12%);
   --color-primary-foreground: hsl(0 0% 100%);
-  --color-sidebar: hsl(36 30% 97%);
-  --color-sidebar-foreground: hsl(232 22% 18%);
-  --color-sidebar-border: hsl(230 18% 91%);
-  --color-player: hsl(0 0% 100%);
-  --color-player-border: hsl(230 18% 90%);
-  --color-ring: hsl(258 48% 56%);
+  --color-sidebar: hsl(240 5% 97%);
+  --color-sidebar-foreground: hsl(240 6% 10%);
+  --color-sidebar-border: hsl(240 6% 91%);
+  --color-player: hsl(240 7% 11%);
+  --color-player-foreground: hsl(0 0% 97%);
+  --color-player-muted: hsl(240 5% 62%);
+  --color-player-border: hsl(240 5% 24%);
+  --color-ring: hsl(240 6% 30%);
   --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(232 22% 18%);
-
-  --shadow-glow: 0 8px 30px hsl(258 48% 56% / 0.12);
+  --color-popover-foreground: hsl(240 6% 10%);
+  --color-destructive: hsl(0 62% 45%);
+  --color-destructive-foreground: hsl(0 0% 100%);
 
   --radius-lg: 8px;
   --radius-md: 6px;
@@ -33,25 +35,23 @@
 }
 
 :root[data-theme='dark'] {
-  --color-background: hsl(232 22% 10%);
-  --color-foreground: hsl(230 20% 94%);
-  --color-card: hsl(232 20% 14%);
-  --color-card-foreground: hsl(230 20% 94%);
-  --color-muted: hsl(232 17% 20%);
-  --color-muted-foreground: hsl(230 12% 68%);
-  --color-border: hsl(232 15% 25%);
-  --color-accent: hsl(258 28% 24%);
-  --color-accent-foreground: hsl(258 70% 86%);
-  --color-primary: hsl(258 62% 70%);
-  --color-primary-foreground: hsl(232 22% 12%);
-  --color-sidebar: hsl(232 22% 12%);
-  --color-sidebar-foreground: hsl(230 20% 94%);
-  --color-sidebar-border: hsl(232 15% 23%);
-  --color-player: hsl(232 20% 13%);
-  --color-player-border: hsl(232 15% 25%);
-  --color-ring: hsl(258 62% 70%);
-  --color-popover: hsl(232 20% 14%);
-  --color-popover-foreground: hsl(230 20% 94%);
+  --color-background: hsl(240 6% 7%);
+  --color-foreground: hsl(240 5% 95%);
+  --color-card: hsl(240 6% 10%);
+  --color-card-foreground: hsl(240 5% 95%);
+  --color-muted: hsl(240 5% 14%);
+  --color-muted-foreground: hsl(240 5% 66%);
+  --color-border: hsl(240 5% 20%);
+  --color-accent: hsl(240 5% 18%);
+  --color-accent-foreground: hsl(240 5% 95%);
+  --color-primary: hsl(240 5% 96%);
+  --color-primary-foreground: hsl(240 6% 10%);
+  --color-sidebar: hsl(240 6% 9%);
+  --color-sidebar-foreground: hsl(240 5% 95%);
+  --color-sidebar-border: hsl(240 5% 18%);
+  --color-ring: hsl(240 5% 70%);
+  --color-popover: hsl(240 6% 10%);
+  --color-popover-foreground: hsl(240 5% 95%);
 }
 
 @keyframes marquee {
@@ -65,11 +65,15 @@
 .badge-master {
   background-image: linear-gradient(
     178deg,
-    hsl(258 60% 96%) 0%,
-    hsl(258 52% 91%) 100%
+    hsl(45 88% 67%) 0%,
+    hsl(42 85% 56%) 48%,
+    hsl(38 80% 47%) 100%
   );
-  color: hsl(258 40% 38%);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.8), 0 1px 2px hsl(258 30% 40% / 0.08);
+  color: hsl(32 65% 14%);
+  box-shadow:
+    inset 0 1px 0 hsl(48 100% 90% / 0.75),
+    inset 0 -1px 0 hsl(32 70% 30% / 0.4),
+    0 1px 1.5px hsl(0 0% 0% / 0.16);
 }
 
 @keyframes badge-sheen {
@@ -191,6 +195,32 @@ input[type="range"].progress-bar::-moz-range-track {
     var(--color-primary) var(--range-fill, 0%),
     var(--color-border) var(--range-fill, 0%)
   );
+}
+
+/* Player sliders — the bar is fixed dark charcoal, so its track and thumb
+   use player tokens instead of theme tokens */
+input[type="range"].progress-bar-player::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--color-player-foreground) var(--range-fill, 0%),
+    var(--color-player-border) var(--range-fill, 0%)
+  );
+}
+
+input[type="range"].progress-bar-player::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    var(--color-player-foreground) var(--range-fill, 0%),
+    var(--color-player-border) var(--range-fill, 0%)
+  );
+}
+
+input[type="range"].progress-bar-player::-webkit-slider-thumb {
+  background: var(--color-player-foreground);
+}
+
+input[type="range"].progress-bar-player::-moz-range-thumb {
+  background: var(--color-player-foreground);
 }
 
 /* Vertical slider — used for volume control */

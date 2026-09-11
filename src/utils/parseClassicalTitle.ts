@@ -27,21 +27,26 @@ export function parseClassicalTitle(title: string): ParsedClassicalTitle {
 
   const trimmed = title.trim()
 
-  // Find the LAST occurrence of ": " — this handles titles that contain
-  // commas or colons in the work name (e.g. "Sonata in C major, K. 545: ...")
-  const lastColonIndex = trimmed.lastIndexOf(': ')
-  if (lastColonIndex === -1) {
-    return { work: trimmed, movement: null }
+  // Find a colon followed by a movement-like suffix.
+  // This avoids accidentally splitting on colons inside parentheses,
+  // e.g. "(Kadenz: Franz Beyer)".
+  const match = trimmed.match(/:\s+([IVXLC]+\.\s+.+)$/)
+
+  if (match && match.index !== undefined) {
+    const work = trimmed.slice(0, match.index).trim()
+    const movement = match[1].trim()
+
+    if (work.length > 0 && MOVEMENT_PATTERN.test(movement)) {
+      return {
+        work,
+        movement,
+      }
+    }
   }
 
-  const beforeColon = trimmed.slice(0, lastColonIndex).trim()
-  const afterColon = trimmed.slice(lastColonIndex + 2).trim()
-
-  // Only split if the suffix looks like a movement (Roman numeral + period)
-  if (MOVEMENT_PATTERN.test(afterColon) && beforeColon.length > 0) {
-    return { work: beforeColon, movement: afterColon }
+  // Not a confident split — keep the full title as the work.
+  return {
+    work: trimmed,
+    movement: null,
   }
-
-  // Not a confident split — keep the full title as the work
-  return { work: trimmed, movement: null }
 }

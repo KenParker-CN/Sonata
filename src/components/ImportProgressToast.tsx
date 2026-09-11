@@ -64,7 +64,7 @@ export default function ImportProgressToast({ progress }: ImportProgressToastPro
           </div>
 
           {/* Progress bar */}
-          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-200 ease-out"
               style={{ width: `${percentage}%` }}
