@@ -1,193 +1,141 @@
-import type { Track } from '@/types/music'
 import type { Album } from '@/utils/groupAlbums'
+import type { SortOption } from '@/hooks/useSort'
+import type { Track } from '@/types/music'
+import { applySort, useSort } from '@/hooks/useSort'
+import { useViewMode } from '@/hooks/useViewMode'
+import { compareNames } from '@/utils/collate'
 import { groupAlbums } from '@/utils/groupAlbums'
-import { parseArtists } from '@/utils/parseArtists'
-import { Disc3, Menu } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from '@/components/ui/ContextMenu'
-import { getAlbumQualityBadge } from '@/utils/getAudioQualityBadge'
-import AudioQualityBadge from '@/components/AudioQualityBadge'
+import { useMemo } from 'react'
+import AlbumCard from '@/components/AlbumCard'
+import CardGrid from '@/components/CardGrid'
+import AlbumListRow from '@/components/AlbumListRow'
+import PageHeader from '@/components/PageHeader'
+import EmptyState from '@/components/EmptyState'
+import SearchInput from '@/components/SearchInput'
+import SearchEmptyState from '@/components/SearchEmptyState'
 import Shelf from '@/components/Shelf'
+import SortSelect from '@/components/SortSelect'
+import ViewModeToggle from '@/components/ViewModeToggle'
+import { matchesSearch } from '@/utils/search'
+import { useSearch } from '@/hooks/useSearch'
+import { useApp } from '@/contexts/app'
 
-interface AlbumsPageProps {
-  tracks: Track[]
-  onPlayAlbum?: (albumName: string, albumArtist: string) => void
-  onPlayNext?: (albumName: string, albumArtist: string) => void
-  onAddToPlaylist?: (albumName: string, albumArtist: string) => void
-  onRemoveFromLibrary?: (albumName: string, albumArtist: string) => void
-  onOpenSidebar?: () => void
-}
+type AlbumKey = 'name' | 'artist' | 'year' | 'tracks' | 'duration' | 'added'
 
-interface AlbumCardProps extends AlbumsPageProps {
+const ALBUM_SORT_OPTIONS: SortOption<AlbumKey>[] = [
+  { value: 'name', label: 'Name', natural: 'asc' },
+  { value: 'artist', label: 'Artist', natural: 'asc' },
+  { value: 'year', label: 'Release year', natural: 'desc' },
+  { value: 'tracks', label: 'Tracks', natural: 'desc' },
+  { value: 'duration', label: 'Duration', natural: 'desc' },
+  { value: 'added', label: 'Recently added', natural: 'desc' },
+]
+
+// Everything the sort control can order albums by, resolved once per library
+// change rather than once per render per card.
+interface AlbumRow {
   album: Album
-  className?: string
+  year: number | null
+  trackCount: number
+  duration: number
+  /** Highest library index the album occupies — imports append, so this is its arrival. */
+  addedAt: number
 }
 
-// Shared by the "Recently Added" shelf and the full grid so both carry the same
-// context menu and badge behavior.
-function AlbumCard({
-  album,
-  tracks,
-  onPlayAlbum,
-  onPlayNext,
-  onAddToPlaylist,
-  onRemoveFromLibrary,
-  className,
-}: AlbumCardProps) {
-  const navigate = useNavigate()
-  const qualityBadge = getAlbumQualityBadge(album.trackIndices.map(i => tracks[i]))
-  const artists = parseArtists(album.albumArtist)
+const ALBUM_COMPARATORS: Record<AlbumKey, (a: AlbumRow, b: AlbumRow) => number> = {
+  name: (a, b) => compareNames(a.album.name, b.album.name),
+  artist: (a, b) => compareNames(a.album.albumArtist, b.album.albumArtist),
+  // Untagged albums sit at year 0, below every dated release
+  year: (a, b) => (a.year ?? 0) - (b.year ?? 0),
+  tracks: (a, b) => a.trackCount - b.trackCount,
+  duration: (a, b) => a.duration - b.duration,
+  added: (a, b) => a.addedAt - b.addedAt,
+}
 
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={className}
-          onClick={() => navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)}
-        >
-          {/* Cover — 1:1 aspect ratio with Apple-style rounding */}
-          <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 relative transition-transform group-hover:scale-[1.02]">
-            {album.cover ? (
-              <img
-                src={album.cover}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-muted">
-                <Disc3 size={40} className="text-muted-foreground/20" />
-              </div>
-            )}
-            {/* Quality badge */}
-            <AudioQualityBadge
-              badge={qualityBadge}
-              className="absolute bottom-2 right-2 shadow-md"
-            />
-          </div>
+const NAME_OF = (row: AlbumRow) => row.album.name
 
-          {/* Album info */}
-          <p className="text-sm font-semibold truncate leading-snug mb-1">
-            {album.name}
-          </p>
-          <p className="text-xs text-muted-foreground truncate">
-            {artists.map((artist, idx) => (
-              <span key={idx}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    navigate(`/artists/${encodeURIComponent(artist)}`)
-                  }}
-                  className="hover:text-foreground transition-colors"
-                >
-                  {artist}
-                </button>
-                {idx < artists.length - 1 && ', '}
-              </span>
-            ))}
-          </p>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
-        {onPlayAlbum && (
-          <ContextMenuItem onClick={() => onPlayAlbum(album.name, album.albumArtist)}>
-            Play
-          </ContextMenuItem>
-        )}
-        {onPlayNext && (
-          <ContextMenuItem onClick={() => onPlayNext(album.name, album.albumArtist)}>
-            Play Next
-          </ContextMenuItem>
-        )}
-        {onAddToPlaylist && (
-          <ContextMenuSub>
-            <ContextMenuSubTrigger>Add to Playlist</ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-48">
-              <ContextMenuItem disabled>
-                No playlists available
-              </ContextMenuItem>
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-        )}
-        <ContextMenuItem onClick={() => navigate(`/artists/${encodeURIComponent(album.albumArtist)}`)}>
-          Go to Artist
-        </ContextMenuItem>
-        {(onRemoveFromLibrary || onPlayAlbum || onPlayNext || onAddToPlaylist) && (
-          <ContextMenuSeparator />
-        )}
-        {onRemoveFromLibrary && (
-          <ContextMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={() => onRemoveFromLibrary(album.name, album.albumArtist)}
-          >
-            Remove from Library
-          </ContextMenuItem>
-        )}
-      </ContextMenuContent>
-    </ContextMenu>
+// The list view's right-aligned summary; an untagged year simply drops out
+function albumMeta(row: AlbumRow): string {
+  return [row.year, `${row.trackCount} ${row.trackCount === 1 ? 'track' : 'tracks'}`]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+// Oldest tagged year wins, so a reissue stays where the original put it
+function earliestYear(tracks: Track[], indices: number[]): number | null {
+  let year: number | null = null
+  for (const index of indices) {
+    const tagged = Number(tracks[index].releaseDate?.slice(0, 4))
+    if (!tagged) continue
+    if (year === null || tagged < year) year = tagged
+  }
+  return year
+}
+
+export default function AlbumsPage() {
+  const { tracks } = useApp()
+  const sort = useSort('albums', ALBUM_SORT_OPTIONS, 'name')
+  const [view, setView] = useViewMode('albums')
+
+  const { albums, recentlyAdded } = useMemo(() => {
+    const rows: AlbumRow[] = groupAlbums(tracks).map(album => {
+      const albumTracks = album.trackIndices.map(i => tracks[i])
+      return {
+        album,
+        year: earliestYear(tracks, album.trackIndices),
+        trackCount: albumTracks.length,
+        duration: albumTracks.reduce((total, track) => total + track.duration, 0),
+        addedAt: Math.max(...album.trackIndices),
+      }
+    })
+    return {
+      albums: applySort(rows, sort, ALBUM_COMPARATORS, NAME_OF),
+      // Newest first whatever the grid below is sorted by
+      recentlyAdded: applySort(
+        rows,
+        { key: 'added', direction: 'desc' },
+        ALBUM_COMPARATORS,
+        NAME_OF,
+      ).slice(0, 12),
+    }
+  }, [tracks, sort])
+
+  // Filtering happens after the sort, so a query keeps the order on screen.
+  const search = useSearch()
+  const visible = useMemo(
+    () =>
+      search.terms.length === 0
+        ? albums
+        : albums.filter(row =>
+            matchesSearch(search.terms, row.album.name, row.album.albumArtist),
+          ),
+    [albums, search.terms],
   )
-}
-
-export default function AlbumsPage({
-  tracks,
-  onPlayAlbum,
-  onPlayNext,
-  onAddToPlaylist,
-  onRemoveFromLibrary,
-  onOpenSidebar
-}: AlbumsPageProps) {
-  const albums = groupAlbums(tracks)
-  // Imported tracks are appended, so the last grouped albums are the newest additions.
-  const recentlyAdded = [...albums.slice(-12)].reverse()
-
-  const cardHandlers = { onPlayAlbum, onPlayNext, onAddToPlaylist, onRemoveFromLibrary }
 
   return (
     <>
-      {/* Page header */}
-      <div className="px-6 pt-6 pb-4 relative">
-        {/* Mobile menu button */}
-        <button
-          onClick={onOpenSidebar}
-          className="lg:hidden absolute top-4 right-4 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Menu size={20} />
-        </button>
-        <h1 className="text-2xl font-bold tracking-tight">Albums</h1>
-        <p className="text-sm text-muted-foreground mt-1">Browse your albums</p>
-      </div>
+      <PageHeader title="Albums" />
 
-      {/* Content */}
-      <div className="px-6 pb-8">
-        {tracks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-            <p className="text-lg font-medium">No albums in your library yet.</p>
-            <p className="text-sm mt-1">Click "Add Music" to import your library</p>
-          </div>
+      <div className="page-gutter pb-8">
+        {albums.length === 0 ? (
+          <EmptyState
+            title="No albums in your library yet."
+            hint="Click “Add Music” to import your library"
+          />
         ) : (
           <>
-            {albums.length > recentlyAdded.length && (
+            {albums.length > recentlyAdded.length && !search.active && (
               <section className="mb-10">
                 <h2 className="text-lg font-semibold tracking-tight mb-4">
                   Recently Added
                 </h2>
                 <Shelf>
                   <div className="flex gap-6">
-                    {recentlyAdded.map(album => (
+                    {recentlyAdded.map(({ album }) => (
                       <AlbumCard
                         key={`recent-${album.name}::${album.albumArtist}`}
                         album={album}
-                        tracks={tracks}
-                        {...cardHandlers}
-                        className="group cursor-pointer shrink-0 snap-start w-[220px]"
+                        className="shrink-0 snap-start w-[220px]"
                       />
                     ))}
                   </div>
@@ -196,23 +144,39 @@ export default function AlbumsPage({
             )}
 
             <section>
-              <h2 className="text-lg font-semibold tracking-tight mb-4">
-                All Albums
-              </h2>
-              <div
-                className="grid gap-6"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}
-              >
-                {albums.map(album => (
-                  <AlbumCard
-                    key={`${album.name}::${album.albumArtist}`}
-                    album={album}
-                    tracks={tracks}
-                    {...cardHandlers}
-                    className="group cursor-pointer"
-                  />
-                ))}
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                  All Albums
+                </h2>
+                <div className="flex flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3">
+                  <p className="text-xs text-muted-foreground">{visible.length} {visible.length === 1 ? 'album' : 'albums'}</p>
+                  <SortSelect label="Sort albums by" sort={sort} />
+                  <ViewModeToggle label="Albums view" value={view} onChange={setView} />
+                  <SearchInput label="Search albums" value={search.query} onChange={search.setQuery} />
+                </div>
               </div>
+              {visible.length === 0 ? (
+                <SearchEmptyState query={search.query} onClear={() => search.setQuery('')} />
+              ) : view === 'grid' ? (
+                <CardGrid>
+                  {visible.map(({ album }) => (
+                    <AlbumCard
+                      key={`${album.name}::${album.albumArtist}`}
+                      album={album}
+                    />
+                  ))}
+                </CardGrid>
+              ) : (
+                <div className="flex flex-col">
+                  {visible.map(row => (
+                    <AlbumListRow
+                      key={`${row.album.name}::${row.album.albumArtist}`}
+                      album={row.album}
+                      meta={albumMeta(row)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           </>
         )}

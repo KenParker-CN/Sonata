@@ -11,8 +11,15 @@ import {
   Repeat1,
   Volume2,
   VolumeX,
+  ListMusic,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Link } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
+import AudioQualityBadge from '@/components/AudioQualityBadge'
+import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
+import { artistPath, trackPath } from '@/utils/routes'
+import * as React from "react";
 
 interface PlayerBarProps {
   track: Track | null
@@ -25,6 +32,8 @@ interface PlayerBarProps {
   volume: number
   canPrev: boolean
   canNext: boolean
+  queueCount: number
+  playbackError?: string | null
   onTogglePlay: () => void
   onPrev: () => void
   onNext: () => void
@@ -32,6 +41,7 @@ interface PlayerBarProps {
   onVolumeChange: (volume: number) => void
   onCycleRepeatMode: () => void
   onToggleShuffle: () => void
+  onOpenQueue: () => void
 }
 
 const transportBtn =
@@ -48,6 +58,8 @@ export default function PlayerBar({
   volume,
   canPrev,
   canNext,
+  queueCount,
+  playbackError,
   onTogglePlay,
   onPrev,
   onNext,
@@ -55,11 +67,105 @@ export default function PlayerBar({
   onVolumeChange,
   onCycleRepeatMode,
   onToggleShuffle,
+  onOpenQueue,
 }: PlayerBarProps) {
   return (
-    <div className="h-[92px] shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
-      {/* Left: transport controls */}
+    <div className="h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
+      {/* Left: track info — fixed width block; the cover is anchored to its left edge regardless of title length */}
+      <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
+        <AnimatePresence initial={false} mode="wait">
+          <motion.div
+            key={track?.id ?? 'no-track'}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="flex w-full items-center gap-3"
+          >
+            {track?.cover ? (
+              <img src={track.cover} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-player-border text-player-muted">
+                <Play size={14} />
+              </div>
+            )}
+            <div className="min-w-0 flex-1 text-left">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="truncate text-sm font-medium text-player-foreground">
+                  <Link
+                    to={track ? trackPath(track.id) : '#'}
+                    className="hover:underline"
+                  >
+                    {track?.title ?? 'No track selected'}
+                  </Link>
+                </p>
+                {track && (
+                  <AudioQualityBadge
+                    badge={getAudioQualityBadge(track)}
+                    onDark
+                    className="px-1 py-px text-[10px]"
+                  />
+                )}
+              </div>
+              <p className="truncate text-xs text-player-muted">
+                {track?.artist ? parseArtists(track.artist).map((artist, idx, arr) => (
+                  <span key={artist}>
+                    <Link
+                      to={artistPath(artist)}
+                      className="hover:underline"
+                    >
+                      {artist}
+                    </Link>
+                    {idx < arr.length - 1 && ', '}
+                  </span>
+                )) : 'Add music to start listening'}
+              </p>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Center: time + progress (mobile also shows the track title) */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+        <p className="sm:hidden truncate text-xs font-medium text-player-foreground">
+          {track?.title ?? 'No track selected'}
+        </p>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 text-xs text-player-muted tabular-nums">
+          <span className="w-9 sm:w-11 text-right shrink-0">{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            value={currentTime}
+            onChange={e => onSeek(Number(e.target.value))}
+            aria-label="Track progress"
+            className="progress-bar progress-bar-player flex-1 h-5 min-w-0"
+            style={{ '--range-fill': `${duration > 0 ? (currentTime / duration) * 100 : 0}%` } as React.CSSProperties}
+          />
+          <span className="w-9 sm:w-11 shrink-0">{formatTime(duration)}</span>
+        </div>
+        {playbackError && (
+          <p className="truncate text-[11px] text-destructive" role="alert">
+            {playbackError}
+          </p>
+        )}
+      </div>
+
+      {/* Right of progress: transport controls */}
       <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+        <button
+          onClick={onOpenQueue}
+          aria-label="Open queue"
+          title={`Queue (${queueCount} upcoming)`}
+          className={cn(transportBtn, 'text-player-foreground relative')}
+        >
+          <ListMusic size={17} />
+          {queueCount > 0 && (
+            <span className="absolute -top-0.5 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-player-border px-1 text-[9px] leading-none text-player-muted tabular-nums">
+              {queueCount}
+            </span>
+          )}
+        </button>
         <button
           onClick={onToggleShuffle}
           aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
@@ -102,48 +208,8 @@ export default function PlayerBar({
         </button>
       </div>
 
-      {/* Center: time + progress (mobile also shows the track title) */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-        <p className="sm:hidden truncate text-xs font-medium text-player-foreground">
-          {track?.title ?? 'No track selected'}
-        </p>
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 text-xs text-player-muted tabular-nums">
-          <span className="w-[36px] sm:w-[44px] text-right shrink-0">{formatTime(currentTime)}</span>
-          <input
-            type="range"
-            min={0}
-            max={duration || 0}
-            value={currentTime}
-            onChange={e => onSeek(Number(e.target.value))}
-            aria-label="Track progress"
-            className="progress-bar progress-bar-player flex-1 h-5 min-w-0"
-            style={{ '--range-fill': `${duration > 0 ? (currentTime / duration) * 100 : 0}%` } as React.CSSProperties}
-          />
-          <span className="w-[36px] sm:w-[44px] shrink-0">{formatTime(duration)}</span>
-        </div>
-      </div>
-
-      {/* Track info — right of the progress bar */}
-      <div className="hidden sm:flex items-center gap-3 w-[260px] lg:w-[320px] shrink-0 min-w-0 justify-end">
-        {track?.cover ? (
-          <img src={track.cover} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
-        ) : (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-player-border text-player-muted">
-            <Play size={14} />
-          </div>
-        )}
-        <div className="min-w-0 text-right">
-          <p className="truncate text-sm font-medium text-player-foreground">
-            {track?.title ?? 'No track selected'}
-          </p>
-          <p className="truncate text-xs text-player-muted">
-            {track?.artist ? parseArtists(track.artist).join(', ') : 'Add music to start listening'}
-          </p>
-        </div>
-      </div>
-
       {/* Far right: volume */}
-      <div className="hidden lg:flex items-center gap-2 w-[130px] shrink-0 justify-end text-player-muted">
+      <div className="hidden lg:flex items-center gap-2 w-32.5 shrink-0 justify-end text-player-muted">
         <button
           onClick={() => onVolumeChange(volume === 0 ? 1 : 0)}
           aria-label={volume === 0 ? 'Unmute' : 'Mute'}

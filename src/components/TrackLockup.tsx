@@ -1,25 +1,27 @@
-import type { Track } from '@/types/music'
+import type { Playlist, Track } from '@/types/music'
+import type { TrackMenuLinks } from '@/components/TrackContextMenu'
 import { Play, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Link } from 'react-router-dom'
 import {
   ContextMenu,
   ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
 } from '@/components/ui/ContextMenu'
+import TrackMenuContent from '@/components/TrackContextMenu'
 import { useState } from 'react'
 import AudioQualityBadge from './AudioQualityBadge'
 import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
+import { trackPath } from '@/utils/routes'
 
 interface TrackLockupProps {
   track: Track
   isActive: boolean
+  playlists: Playlist[]
   onClick: () => void
-  onPlayNext?: (track: Track) => void
-  onAddToPlaylist?: (trackId: string) => void
-  onGoToAlbum?: (album: { name: string; albumArtist: string }) => void
-  onGoToArtist?: (artistName: string) => void
+  onPlayNext?: (trackId: string) => void
+  onAddToQueue?: (trackId: string) => void
+  onAddToPlaylist?: (trackId: string, playlistId: string) => void
+  links?: TrackMenuLinks
   onRemoveFromLibrary?: (trackId: string) => void
   showQualityBadge?: boolean
 }
@@ -27,16 +29,17 @@ interface TrackLockupProps {
 export default function TrackLockup({ 
   track, 
   isActive, 
+  playlists,
   onClick,
   onPlayNext,
+  onAddToQueue,
   onAddToPlaylist,
-  onGoToAlbum,
-  onGoToArtist,
+  links,
   onRemoveFromLibrary,
   showQualityBadge = true,
 }: TrackLockupProps) {
   const [contextMenuOpen, setContextMenuOpen] = useState(false)
-  const qualityBadge = getAudioQualityBadge(track)
+  const qualityBadge = showQualityBadge ? getAudioQualityBadge(track) : null
 
   return (
     <ContextMenu open={contextMenuOpen} onOpenChange={setContextMenuOpen}>
@@ -56,17 +59,10 @@ export default function TrackLockup({
               </div>
             )}
 
-            {/* Play button overlay - shows on hover */}
-            <div className="play-button-overlay absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded">
+            {/* Play button overlay — a hover cue only; a tap already plays the row */}
+            <div className="play-button-overlay absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded touch:hidden">
               <Play size={20} className="text-white fill-white" />
             </div>
-
-            {/* Currently playing indicator - subtle icon */}
-            {isActive && (
-              <div className="absolute top-1 left-1 p-1 rounded-full bg-background/90 shadow-sm">
-                <Play size={12} className="fill-current text-foreground" />
-              </div>
-            )}
           </div>
 
           {/* Content */}
@@ -77,7 +73,13 @@ export default function TrackLockup({
                 'text-sm truncate',
                 isActive ? 'font-medium' : 'font-normal'
               )}>
-                {track.title}
+                <Link
+                  to={trackPath(track.id)}
+                  className="hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {track.title}
+                </Link>
               </p>
               <p className="text-xs text-muted-foreground truncate mt-0.5">
                 {track.album}
@@ -87,7 +89,9 @@ export default function TrackLockup({
 
           {/* Context menu button */}
           <button
-            className="context-menu-button opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-accent"
+            type="button"
+            aria-label={`More actions for ${track.title}`}
+            className="context-menu-button opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-accent touch:opacity-100 touch-target"
             onClick={(e) => {
               e.stopPropagation()
               setContextMenuOpen(true)
@@ -97,43 +101,15 @@ export default function TrackLockup({
           </button>
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-64">
-        <ContextMenuItem onClick={onClick}>
-          <Play className="mr-2 h-4 w-4" />
-          Play
-        </ContextMenuItem>
-        {onPlayNext && (
-          <ContextMenuItem onClick={() => onPlayNext(track)}>
-            Play Next
-          </ContextMenuItem>
-        )}
-        {onAddToPlaylist && (
-          <ContextMenuItem onClick={() => onAddToPlaylist(track.id)}>
-            Add to Playlist
-          </ContextMenuItem>
-        )}
-        {onGoToAlbum && track.album && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => onGoToAlbum({ name: track.album, albumArtist: track.albumArtist || track.artist })}>
-              Go to Album
-            </ContextMenuItem>
-          </>
-        )}
-        {onGoToArtist && (
-          <ContextMenuItem onClick={() => onGoToArtist(track.artist)}>
-            Go to Artist
-          </ContextMenuItem>
-        )}
-        {onRemoveFromLibrary && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem className="text-destructive focus:text-destructive" onClick={() => onRemoveFromLibrary(track.id)}>
-              Remove from Library
-            </ContextMenuItem>
-          </>
-        )}
-      </ContextMenuContent>
+      <TrackMenuContent
+        track={track}
+        playlists={playlists}
+        onPlayNext={onPlayNext}
+        onAddToQueue={onAddToQueue}
+        onAddToPlaylist={onAddToPlaylist}
+        links={links}
+        onRemoveFromLibrary={onRemoveFromLibrary}
+      />
     </ContextMenu>
   )
 }

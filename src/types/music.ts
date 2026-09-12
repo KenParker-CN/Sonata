@@ -1,42 +1,5 @@
 export type RepeatMode = 'off' | 'one' | 'all'
 
-export type Page = 'library' | 'artists' | 'albums' | 'playlists'
-
-/**
- * Word-level timing for synchronized lyrics.
- * Each word has a timestamp indicating when it should be highlighted during playback.
- */
-export interface LyricWord {
-  time: number // seconds
-  text: string
-}
-
-/**
- * A single line of lyrics with optional word-level synchronization.
- * - startTime: when this line becomes active
- * - text: the full text of the line
- * - words: optional word-level timings (if present, enables word-by-word highlighting)
- * - translation: optional translation text for this line
- * - romanization: optional romanization/pinyin for this line
- */
-export interface LyricLine {
-  startTime: number // seconds
-  text: string
-  words?: LyricWord[]
-  translation?: string
-  romanization?: string
-}
-
-/**
- * Lyrics data structure supporting both synced and unsynced lyrics.
- * - synced: true if timestamps are available, false for plain text lyrics
- * - lines: array of lyric lines
- */
-export interface Lyrics {
-  synced: boolean
-  lines: LyricLine[]
-}
-
 export interface Track {
   id: string
   url: string
@@ -44,22 +7,42 @@ export interface Track {
   title: string
   album: string
   albumArtist: string
+  composer?: string | null
   trackNumber: number | null
   discNumber: number | null
   cover: string | null
   duration: number
-  fileKey?: string
-  filePath?: string
+  fileKey: string
+  filePath: string
   releaseDate?: string | null
   copyright?: string | null
   bitDepth?: number | null
   sampleRate?: number | null
   bitrate?: number | null
-  lyrics?: Lyrics | null
+  codec?: string | null
+  lossless?: boolean | null
 }
 
 export interface Playlist {
   id: string
   name: string
   trackIds: string[]
+  /** Optional fields: playlists stored before they existed carry none of them. */
+  description?: string | null
+  /** Epoch ms. Unknown for playlists created before timestamps were recorded. */
+  createdAt?: number
+  updatedAt?: number
+}
+
+/**
+ * A single entry in the playback queue.
+ * - id: unique id for THIS queue entry (a track may appear multiple times)
+ * - trackId: id of the referenced track — stable across library edits, unlike
+ *   an array index which shifts whenever a track is removed
+ *
+ * The player keeps one queue as the single source of truth for playback order.
+ */
+export interface QueueItem {
+  id: string
+  trackId: string
 }

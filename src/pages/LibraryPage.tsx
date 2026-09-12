@@ -1,65 +1,85 @@
-import type { Track } from '@/types/music'
 import TrackList from '@/components/TrackList'
-import { LibraryBig, Menu, Plus, ArrowUpDown } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { LibraryBig, Plus } from 'lucide-react'
+import type { SortOption } from '@/hooks/useSort'
+import type { Track } from '@/types/music'
+import { applySort, useSort } from '@/hooks/useSort'
+import { byDiscAndTrack, compareNames } from '@/utils/collate'
+import { useMemo } from 'react'
+import PageHeader from '@/components/PageHeader'
+import SearchInput from '@/components/SearchInput'
+import SearchEmptyState from '@/components/SearchEmptyState'
+import SortSelect from '@/components/SortSelect'
+import { matchesSearch } from '@/utils/search'
+import { useSearch } from '@/hooks/useSearch'
+import { useApp } from '@/contexts/app'
 
-interface LibraryPageProps {
-  tracks: Track[]
-  currentIndex: number
-  onTrackSelect: (index: number) => void
-  onPlayNext?: (track: Track) => void
-  onAddToPlaylist?: (trackId: string) => void
-  onGoToAlbum?: (album: { name: string; albumArtist: string }) => void
-  onGoToArtist?: (artistName: string) => void
-  onRemoveFromLibrary?: (trackId: string) => void
-  onImportMusic?: () => void
-  onOpenSidebar?: () => void
+type TrackKey = 'title' | 'artist' | 'album' | 'duration'
+
+const TRACK_SORT_OPTIONS: SortOption<TrackKey>[] = [
+  { value: 'title', label: 'Title', natural: 'asc' },
+  { value: 'artist', label: 'Artist', natural: 'asc' },
+  { value: 'album', label: 'Album', natural: 'asc' },
+  { value: 'duration', label: 'Duration', natural: 'desc' },
+]
+
+// Tracks that tie on the chosen field stay in listening order, so sorting by
+// album or artist still reads as an album rather than a shuffled list.
+const TRACK_COMPARATORS: Record<TrackKey, (a: Track, b: Track) => number> = {
+  title: (a, b) => compareNames(a.title, b.title),
+  artist: (a, b) =>
+    compareNames(a.artist, b.artist) ||
+    compareNames(a.album, b.album) ||
+    byDiscAndTrack(a, b),
+  album: (a, b) => compareNames(a.album, b.album) || byDiscAndTrack(a, b),
+  duration: (a, b) => a.duration - b.duration,
 }
 
-export default function LibraryPage({ 
-  tracks, 
-  currentIndex, 
-  onTrackSelect, 
-  onPlayNext,
-  onAddToPlaylist,
-  onGoToAlbum,
-  onGoToArtist,
-  onRemoveFromLibrary,
-  onImportMusic,
-  onOpenSidebar
-}: LibraryPageProps) {
-  const navigate = useNavigate()
-  const [sortBy, setSortBy] = useState<'title' | 'artist' | 'album' | 'duration'>('title')
-  const sortedTracks = useMemo(() => {
-    return [...tracks].sort((a, b) => {
-      if (sortBy === 'duration') return b.duration - a.duration
-      const left = sortBy === 'title' ? a.title : sortBy === 'artist' ? a.artist : a.album
-      const right = sortBy === 'title' ? b.title : sortBy === 'artist' ? b.artist : b.album
-      return left.localeCompare(right, undefined, { sensitivity: 'base' })
-    })
-  }, [tracks, sortBy])
-  const currentTrackId = tracks[currentIndex]?.id
-  const sortedCurrentIndex = sortedTracks.findIndex(track => track.id === currentTrackId)
+const NAME_OF = (track: Track) => track.title
+
+export default function LibraryPage() {
+  const {
+    tracks,
+    playlists,
+    currentTrackId,
+    playFromContext,
+    playTrackNext,
+    addTrackToQueue,
+    addTrackToPlaylist,
+    removeFromLibrary,
+    importMusic,
+  } = useApp()
+  const sort = useSort('library', TRACK_SORT_OPTIONS, 'title')
+  const sortedTracks = useMemo(
+    () => applySort(tracks, sort, TRACK_COMPARATORS, NAME_OF),
+    [tracks, sort],
+  )
+  // Filtering happens after the sort, so a query keeps the order on screen.
+  const search = useSearch()
+  const visibleTracks = useMemo(
+    () =>
+      search.terms.length === 0
+        ? sortedTracks
+        : sortedTracks.filter(track =>
+            matchesSearch(
+              search.terms,
+              track.title,
+              track.artist,
+              track.album,
+              track.albumArtist,
+              track.composer,
+            ),
+          ),
+    [sortedTracks, search.terms],
+  )
+  // The playback context for this page: the visible tracks, in the visible order.
+  const visibleTrackIds = useMemo(() => visibleTracks.map(t => t.id), [visibleTracks])
 
   return (
     <>
-      {/* Page header */}
-      <div className="px-6 pt-6 pb-4 relative">
-        {/* Mobile menu button */}
-        <button
-          onClick={onOpenSidebar}
-          aria-label="Open navigation"
-          className="lg:hidden absolute top-4 right-4 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Menu size={20} />
-        </button>
-        <h1 className="text-2xl font-bold tracking-tight">Library</h1>
-        <p className="text-sm text-muted-foreground mt-1">Your music</p>
-      </div>
+      <PageHeader title="Library" />
 
       {/* Content */}
-      <div className="px-4 pb-8 sm:px-6">
+      <div className="page-gutter pb-8">
         {tracks.length === 0 ? (
           <div className="flex min-h-[min(560px,calc(100svh-220px))] flex-col items-center justify-center px-6 py-16 text-center">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
@@ -71,54 +91,40 @@ export default function LibraryPage({
             </p>
             <button
               type="button"
-              onClick={onImportMusic}
+              onClick={importMusic}
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Plus size={16} />
-              Import music
+              Add Music
             </button>
-            <p className="mt-3 text-xs text-muted-foreground">Choose audio files or a folder from your device</p>
+            <p className="mt-3 text-xs text-muted-foreground">Pick a folder of music from your device — it stays in your library after a reload</p>
           </div>
         ) : (
           <>
-            <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
               <h2 className="text-sm font-semibold tracking-tight text-foreground">
                 All Tracks
               </h2>
-              <div className="flex items-center gap-3">
-                <p className="text-xs text-muted-foreground">{tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}</p>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <ArrowUpDown size={14} aria-hidden="true" />
-                  <span className="sr-only">Sort tracks by</span>
-                  <select
-                    value={sortBy}
-                    onChange={event => setSortBy(event.target.value as typeof sortBy)}
-                    aria-label="Sort tracks by"
-                    className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="title">Title</option>
-                    <option value="artist">Artist</option>
-                    <option value="album">Album</option>
-                    <option value="duration">Longest first</option>
-                  </select>
-                </label>
+              <div className="flex flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3">
+                <p className="text-xs text-muted-foreground">{visibleTracks.length} {visibleTracks.length === 1 ? 'track' : 'tracks'}</p>
+                <SortSelect label="Sort tracks by" sort={sort} />
+                <SearchInput label="Search tracks" value={search.query} onChange={search.setQuery} />
               </div>
             </div>
-            <TrackList
-            tracks={sortedTracks}
-            currentIndex={sortedCurrentIndex}
-            onTrackSelect={index => {
-              const originalIndex = tracks.findIndex(track => track.id === sortedTracks[index].id)
-              if (originalIndex >= 0) onTrackSelect(originalIndex)
-            }}
-            onArtistClick={(artistName) => navigate(`/artists/${encodeURIComponent(artistName)}`)}
-            onAlbumClick={(album) => navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)}
-            onPlayNext={onPlayNext}
-            onAddToPlaylist={onAddToPlaylist}
-            onGoToAlbum={onGoToAlbum}
-            onGoToArtist={onGoToArtist}
-            onRemoveFromLibrary={onRemoveFromLibrary}
-            />
+            {visibleTracks.length === 0 ? (
+              <SearchEmptyState query={search.query} onClear={() => search.setQuery('')} />
+            ) : (
+              <TrackList
+                tracks={visibleTracks}
+                currentTrackId={currentTrackId}
+                playlists={playlists}
+                onTrackSelect={index => playFromContext(visibleTrackIds, index)}
+                onPlayNext={playTrackNext}
+                onAddToQueue={addTrackToQueue}
+                onAddToPlaylist={addTrackToPlaylist}
+                onRemoveFromLibrary={removeFromLibrary}
+              />
+            )}
           </>
         )}
       </div>

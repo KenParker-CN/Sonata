@@ -1,52 +1,46 @@
-import type { Track } from '@/types/music'
 import { parseArtists } from '@/utils/parseArtists'
+import { hasArtist } from '@/utils/groupArtists'
 import { groupAlbums } from '@/utils/groupAlbums'
-import { ArrowLeft, Users, Menu, Disc3 } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { compareNames } from '@/utils/collate'
+import { Users } from 'lucide-react'
+import { useParams } from 'react-router-dom'
 import { useMemo } from 'react'
-import TrackLockup from '@/components/TrackLockup'
+import AlbumCard from '@/components/AlbumCard'
+import ArtPicker from '@/components/ArtPicker'
+import BackLink from '@/components/BackLink'
+import NotFoundState from '@/components/NotFoundState'
 import Shelf from '@/components/Shelf'
+import TrackLockup from '@/components/TrackLockup'
+import { artistArtId } from '@/services/customArt'
+import { useApp } from '@/contexts/app'
 
-interface ArtistDetailPageProps {
-  tracks: Track[]
-  currentIndex: number
-  onTrackSelect: (index: number) => void
-  onOpenSidebar?: () => void
-  onPlayNext?: (track: Track) => void
-  onAddToPlaylist?: (trackId: string) => void
-  onGoToAlbum?: (album: { name: string; albumArtist: string }) => void
-  onGoToArtist?: (artistName: string) => void
-  onRemoveFromLibrary?: (trackId: string) => void
-}
-
-export default function ArtistDetailPage({
-  tracks,
-  currentIndex,
-  onTrackSelect,
-  onOpenSidebar,
-  onPlayNext,
-  onAddToPlaylist,
-  onGoToAlbum,
-  onGoToArtist,
-  onRemoveFromLibrary,
-}: ArtistDetailPageProps) {
-  const navigate = useNavigate()
+export default function ArtistDetailPage() {
+  const {
+    tracks,
+    playlists,
+    currentTrackId,
+    playFromContext,
+    playTrackNext,
+    addTrackToQueue,
+    addTrackToPlaylist,
+    removeFromLibrary,
+  } = useApp()
   const { artistName } = useParams<{ artistName: string }>()
 
   // Decode URL params
   const decodedArtistName = artistName ? decodeURIComponent(artistName) : ''
 
-  // Find all tracks where this artist appears
+  // Every track crediting this artist, by the same rule the Artists list counts with
   const artistTracks = useMemo(() => {
-    return tracks.filter(track => {
-      const artists = parseArtists(track.artist)
-      return artists.some(artist => artist === decodedArtistName)
-    })
+    return tracks.filter(track => hasArtist(track, decodedArtistName))
   }, [tracks, decodedArtistName])
+
+  // The playback context for this page: the artist's tracks in library order.
+  const artistTrackIds = useMemo(() => artistTracks.map(t => t.id), [artistTracks])
 
   // Popular Tracks: stable selection sorted alphabetically, take first 12
   const popularTracks = useMemo(() => {
-    const sorted = [...artistTracks].sort((a, b) => a.title.localeCompare(b.title))
+    const sorted = [...artistTracks].sort((a, b) => compareNames(a.title, b.title))
     return sorted.slice(0, 12)
   }, [artistTracks])
 
@@ -70,56 +64,30 @@ export default function ArtistDetailPage({
 
   if (artistTracks.length === 0) {
     return (
-      <div className="px-6 pt-6">
-        <button
-          onClick={() => navigate('/artists')}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft size={16} />
-          Back to Artists
-        </button>
-        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-          <Users size={40} className="mb-4 opacity-30" />
-          <p className="text-lg font-medium">Artist not found</p>
-        </div>
-      </div>
+      <NotFoundState
+        title="Artist not found"
+        icon={Users}
+        to="/artists"
+        backLabel="Back to artists"
+      />
     )
   }
 
   return (
-    <div className="px-6 pt-6 pb-8 relative">
-      {/* Mobile menu button */}
-      <button
-        onClick={onOpenSidebar}
-        className="lg:hidden absolute top-4 right-4 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <Menu size={20} />
-      </button>
-
-      {/* Back button */}
-      <button
-        onClick={() => navigate('/artists')}
-        aria-label="Back to artists"
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-      >
-        <ArrowLeft size={16} />
-        Back
-      </button>
+    <div className="page-gutter pt-6 pb-8">
+      <BackLink to="/artists" label="Back to artists" />
 
       {/* Profile Section */}
       <div className="flex flex-col sm:flex-row gap-6 mb-8">
-        {/* Artist artwork placeholder */}
-        <div className="w-32 h-32 sm:w-48 sm:h-48 shrink-0 rounded-lg overflow-hidden bg-muted mx-auto sm:mx-0">
-          <div className="w-full h-full flex items-center justify-center bg-muted">
-            <Users size={32} className="sm:w-[48px] sm:h-[48px] text-muted-foreground/30" />
-          </div>
-        </div>
+        {/* Artist artwork — painted from the name until a custom image exists */}
+        <ArtPicker
+          name={decodedArtistName}
+          upload={{ artId: artistArtId(decodedArtistName), noun: 'artist image' }}
+          className="w-32 h-32 sm:w-48 sm:h-48 shrink-0 rounded-lg mx-auto sm:mx-0"
+        />
 
         {/* Artist info */}
         <div className="flex flex-col justify-between h-auto sm:h-48 text-center sm:text-left">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Artist
-          </p>
           <div className="space-y-2">
             <h1 className="text-xl sm:text-3xl font-bold tracking-tight">{decodedArtistName}</h1>
           </div>
@@ -144,25 +112,24 @@ export default function ArtistDetailPage({
                 {/* Group tracks into columns of 3 rows each */}
                 {Array.from({ length: Math.ceil(popularTracks.length / 3) }).map((_, colIndex) => (
                   <div key={colIndex} className="flex flex-col gap-1 shrink-0 snap-start">
-                    {popularTracks.slice(colIndex * 3, colIndex * 3 + 3).map(track => {
-                      const trackIndex = tracks.indexOf(track)
-                      const isActive = trackIndex === currentIndex
-
-                      return (
-                        <TrackLockup
-                          key={track.id}
-                          track={track}
-                          isActive={isActive}
-                          onClick={() => onTrackSelect(trackIndex)}
-                          onPlayNext={onPlayNext}
-                          onAddToPlaylist={onAddToPlaylist}
-                          onGoToAlbum={onGoToAlbum}
-                          onGoToArtist={onGoToArtist}
-                          onRemoveFromLibrary={onRemoveFromLibrary}
-                          showQualityBadge={false}
-                        />
-                      )
-                    })}
+                    {popularTracks.slice(colIndex * 3, colIndex * 3 + 3).map(track => (
+                      <TrackLockup
+                        key={track.id}
+                        track={track}
+                        isActive={track.id === currentTrackId}
+                        playlists={playlists}
+                        onClick={() => playFromContext(
+                          artistTrackIds,
+                          artistTracks.findIndex(t => t.id === track.id),
+                        )}
+                        onPlayNext={playTrackNext}
+                        onAddToQueue={addTrackToQueue}
+                        onAddToPlaylist={addTrackToPlaylist}
+                        links={{ album: true, composer: true }}
+                        onRemoveFromLibrary={removeFromLibrary}
+                        showQualityBadge={false}
+                      />
+                    ))}
                   </div>
                 ))}
               </div>
@@ -177,47 +144,11 @@ export default function ArtistDetailPage({
             <Shelf>
               <div className="flex gap-6 pb-2 px-1">
                 {albums.map(album => (
-                  <div
+                  <AlbumCard
                     key={`${album.name}::${album.albumArtist}`}
-                    className="group cursor-pointer shrink-0 snap-start w-[220px]"
-                    onClick={() => navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)}
-                  >
-                    {/* Cover — 1:1 aspect ratio */}
-                    <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 transition-transform group-hover:scale-[1.02]">
-                      {album.cover ? (
-                        <img
-                          src={album.cover}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <Disc3 size={36} className="text-muted-foreground/30" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Album info */}
-                    <p className="text-sm font-semibold truncate leading-snug mb-1">
-                      {album.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {parseArtists(album.albumArtist).map((artist, idx) => (
-                        <span key={idx}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              navigate(`/artists/${encodeURIComponent(artist)}`)
-                            }}
-                            className="hover:text-foreground transition-colors"
-                          >
-                            {artist}
-                          </button>
-                          {idx < parseArtists(album.albumArtist).length - 1 && ', '}
-                        </span>
-                      ))}
-                    </p>
-                  </div>
+                    album={album}
+                    className="shrink-0 snap-start w-[220px]"
+                  />
                 ))}
               </div>
             </Shelf>
@@ -231,47 +162,11 @@ export default function ArtistDetailPage({
             <Shelf>
               <div className="flex gap-6 pb-2 px-1">
                 {appearsOn.map(album => (
-                  <div
+                  <AlbumCard
                     key={`${album.name}::${album.albumArtist}`}
-                    className="group cursor-pointer shrink-0 snap-start w-[220px]"
-                    onClick={() => navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)}
-                  >
-                    {/* Cover — 1:1 aspect ratio */}
-                    <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 transition-transform group-hover:scale-[1.02]">
-                      {album.cover ? (
-                        <img
-                          src={album.cover}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <Disc3 size={36} className="text-muted-foreground/30" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Album info */}
-                    <p className="text-sm font-semibold truncate leading-snug mb-1">
-                      {album.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {parseArtists(album.albumArtist).map((artist, idx) => (
-                        <span key={idx}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              navigate(`/artists/${encodeURIComponent(artist)}`)
-                            }}
-                            className="hover:text-foreground transition-colors"
-                          >
-                            {artist}
-                          </button>
-                          {idx < parseArtists(album.albumArtist).length - 1 && ', '}
-                        </span>
-                      ))}
-                    </p>
-                  </div>
+                    album={album}
+                    className="shrink-0 snap-start w-[220px]"
+                  />
                 ))}
               </div>
             </Shelf>

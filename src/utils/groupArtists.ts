@@ -1,38 +1,57 @@
 import type { Track } from '@/types/music'
 import { parseArtists } from '@/utils/parseArtists'
+import { albumKey } from '@/utils/groupAlbums'
 
 export interface Artist {
   name: string
   trackCount: number
+  albumCount: number
+  /** Total length of the distinct tracks credited to this artist. */
+  duration: number
+}
+
+/**
+ * Everyone a track credits: its own artist tag plus the album artist. The
+ * Artists page, the artist detail page and the "Play artist" action all go
+ * through this, so a track cannot be counted under an artist there and missing
+ * from that artist's page here.
+ */
+export function trackArtists(track: Track): string[] {
+  return [...new Set([...parseArtists(track.artist), ...parseArtists(track.albumArtist)])]
+}
+
+export function hasArtist(track: Track, artistName: string): boolean {
+  return trackArtists(track).includes(artistName)
 }
 
 export function groupArtists(tracks: Track[]): Artist[] {
-  // Map artist name → set of track IDs (for dedup counting)
-  const map = new Map<string, Set<string>>()
+  // artist name → everything the sort control can order the page by
+  const map = new Map<
+    string,
+    { trackIds: Set<string>; albumKeys: Set<string>; duration: number }
+  >()
 
   for (const track of tracks) {
-    // Parse both track.artist and track.albumArtist to get all artists
-    const trackArtists = parseArtists(track.artist)
-    const albumArtists = parseArtists(track.albumArtist)
-    
-    // Combine and deduplicate artists for this track
-    const allArtists = [...new Set([...trackArtists, ...albumArtists])]
-    
-    // If no valid artists found, use "Unknown Artist"
-    const names = allArtists.length > 0 ? allArtists : ['Unknown Artist']
+    const names = trackArtists(track)
 
-    for (const name of names) {
-      if (map.has(name)) {
-        map.get(name)!.add(track.id)
-      } else {
-        map.set(name, new Set([track.id]))
+    // If no valid artists found, use "Unknown Artist"
+    for (const name of names.length > 0 ? names : ['Unknown Artist']) {
+      let bucket = map.get(name)
+      if (!bucket) {
+        bucket = { trackIds: new Set(), albumKeys: new Set(), duration: 0 }
+        map.set(name, bucket)
       }
+      bucket.trackIds.add(track.id)
+      bucket.albumKeys.add(albumKey(track))
+      bucket.duration += track.duration
     }
   }
 
-  // Convert to Artist[] with trackCount = number of unique tracks
-  return Array.from(map.entries()).map(([name, trackIds]) => ({
+  // Counts are set sizes, so a track credited to an artist twice still counts once
+  return Array.from(map.entries(), ([name, bucket]) => ({
     name,
-    trackCount: trackIds.size,
+    trackCount: bucket.trackIds.size,
+    albumCount: bucket.albumKeys.size,
+    duration: bucket.duration,
   }))
 }

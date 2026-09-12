@@ -1,65 +1,62 @@
-import type { Track } from '@/types/music'
-import { parseClassicalTitle } from '@/utils/parseClassicalTitle'
-import { parseArtists } from '@/utils/parseArtists'
-import { formatTime, formatDurationLong } from '@/utils/formatTime'
-import { ArrowLeft, Disc3, Play, SkipForward, SkipBack, ListMusic, Menu, MoreHorizontal, ChevronUp, ChevronDown } from 'lucide-react'
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { cn } from '@/lib/utils'
-import {
-  ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-} from '@/components/ui/ContextMenu'
+﻿import type {Track} from '@/types/music'
+import {matchesAlbum} from '@/utils/groupAlbums'
+import {groupTracksByWork, type TrackListItem, type WorkItem} from '@/utils/groupTracksByWork'
+import {parseArtists} from '@/utils/parseArtists'
+import {formatDurationLong, formatTime} from '@/utils/formatTime'
+import {ChevronDown, Disc3} from 'lucide-react'
+import {useMemo, useState} from 'react'
+import {Link, useParams} from 'react-router-dom'
+import {cn} from '@/lib/utils'
+import {ContextMenu, ContextMenuTrigger,} from '@/components/ui/ContextMenu'
+import TrackMenuContent from '@/components/TrackContextMenu'
+import ArtistLinks from '@/components/ArtistLinks'
+import ArtPicker from '@/components/ArtPicker'
 import AudioQualityBadge from '@/components/AudioQualityBadge'
-import { getAlbumQualityBadge } from '@/utils/getAudioQualityBadge'
+import BackLink from '@/components/BackLink'
+import NotFoundState from '@/components/NotFoundState'
+import PlayButton from '@/components/PlayButton'
+import NowPlayingBars from '@/components/NowPlayingBars'
+import {getAlbumQualityBadge} from '@/utils/getAudioQualityBadge'
+import {useApp} from '@/contexts/app'
+import {trackPath} from '@/utils/routes'
 
-interface AlbumDetailPageProps {
-  tracks: Track[]
-  currentIndex: number
-  onTrackSelect: (index: number) => void
-  onPlayAlbum?: (albumName: string, albumArtist: string) => void
-  onOpenSidebar?: () => void
-}
-
-interface WorkGroup {
-  work: string
-  entries: { trackIndex: number; movement: string | null }[]
-}
 
 interface DiscGroup {
-  discNumber: number
-  tracks: { trackIndex: number; track: Track }[]
-  workGroups: WorkGroup[]
+    discNumber: number
+    tracks: Track[]
+    items: TrackListItem[]
 }
 
-// Group consecutive tracks by parsed work title.
-// Tracks that share the same work and are adjacent in the original order
-// are collapsed into a single group.
-function groupTracksByWork(
-  tracks: Track[],
-  trackIndices: number[]
-): WorkGroup[] {
-  const groups: WorkGroup[] = []
+/** One rendered line of a disc's track list. */
+type DiscRow =
+    | { kind: 'track'; track: Track }
+    | { kind: 'work'; work: WorkItem; itemIdx: number }
+    | { kind: 'movement'; work: WorkItem; entry: WorkItem['entries'][number]; entryIdx: number }
 
-  for (const idx of trackIndices) {
-    const track = tracks[idx]
-    const parsed = parseClassicalTitle(track.title)
+// A work's identity for expand/collapse purposes. Position-based keys would
+// carry a collapse from one album to the next, since both start numbering at 0.
+function workKey(discNumber: number, work: WorkItem): string {
+    return `${discNumber}:${work.composer}:${work.work}`
+}
 
-    const lastGroup = groups[groups.length - 1]
-    if (lastGroup && lastGroup.work === parsed.work) {
-      lastGroup.entries.push({ trackIndex: idx, movement: parsed.movement })
-    } else {
-      groups.push({
-        work: parsed.work,
-        entries: [{ trackIndex: idx, movement: parsed.movement }],
-      })
-    }
-  }
-
-  return groups
+// Flatten a disc into the rows it renders. Every row lands in one list — rather
+// than one container per work — so the hairline dividers between rows run
+// uninterrupted down the disc.
+function buildDiscRows(discGroup: DiscGroup, collapsedWorks: Set<string>): DiscRow[] {
+    const rows: DiscRow[] = []
+    discGroup.items.forEach((item, itemIdx) => {
+        if (item.type === 'track') {
+            rows.push({kind: 'track', track: item.track})
+            return
+        }
+        rows.push({kind: 'work', work: item, itemIdx})
+        if (!collapsedWorks.has(workKey(discGroup.discNumber, item))) {
+            item.entries.forEach((entry, entryIdx) =>
+                rows.push({kind: 'movement', work: item, entry, entryIdx})
+            )
+        }
+    })
+    return rows
 }
 
 // Extract disc number from the file path or filename.
@@ -67,528 +64,362 @@ function groupTracksByWork(
 // patterns like CD1, CD 1, Disc1, Disc 1, CD01, Disc01 (case-insensitive).
 // This catches disc info stored either in the filename or in a folder name.
 function extractDiscNumber(track: Track): number | null {
-  const source = track.filePath || (track.fileKey ? track.fileKey.split('|')[0] : '')
-  if (!source) return null
-  const segments = source.split(/[/\\]/)
-  for (let i = segments.length - 1; i >= 0; i--) {
-    const match = segments[i].match(/(?:CD|Disc)\s*(\d+)/i)
-    if (match) return parseInt(match[1], 10)
-  }
-  return null
+    const source = track.filePath
+    const segments = source.split(/[/\\]/)
+    for (let i = segments.length - 1; i >= 0; i--) {
+        const match = segments[i].match(/(?:CD|Disc)\s*(\d+)/i)
+        if (match) return parseInt(match[1], 10)
+    }
+    return null
 }
 
 // Build sorted DiscGroups from a disc-number → tracks mapping
-function buildDiscGroups(
-  discMap: Map<number, { trackIndex: number; track: Track }[]>,
-  allTracks: Track[]
-): DiscGroup[] {
-  return Array.from(discMap.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([discNumber, tracks]) => {
-      const sortedTracks = [...tracks].sort(
-        (a, b) => (a.track.trackNumber ?? 0) - (b.track.trackNumber ?? 0)
-      )
-      return {
-        discNumber,
-        tracks: sortedTracks,
-        workGroups: groupTracksByWork(allTracks, sortedTracks.map(t => t.trackIndex)),
-      }
-    })
+function buildDiscGroups(discMap: Map<number, Track[]>): DiscGroup[] {
+    return Array.from(discMap.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([discNumber, tracks]) => {
+            const sortedTracks = [...tracks].sort(
+                (a, b) => (a.trackNumber ?? 0) - (b.trackNumber ?? 0)
+            )
+            return {
+                discNumber,
+                tracks: sortedTracks,
+                items: groupTracksByWork(sortedTracks),
+            }
+        })
 }
 
 // Group album tracks by disc number using explicit metadata, filename detection, or inferred boundaries
-function groupTracksByDisc(
-  albumTracks: Track[],
-  allTracks: Track[]
-): DiscGroup[] {
-  // Strategy 1: ALL tracks have explicit discNumber metadata
-  const hasExplicitDiscNumbers = albumTracks.every(t => t.discNumber != null && t.discNumber > 0)
+function groupTracksByDisc(albumTracks: Track[]): DiscGroup[] {
+    // Strategy 1: ALL tracks have explicit discNumber metadata
+    const hasExplicitDiscNumbers = albumTracks.every(t => t.discNumber != null && t.discNumber > 0)
 
-  if (hasExplicitDiscNumbers) {
-    const discMap = new Map<number, { trackIndex: number; track: Track }[]>()
+    if (hasExplicitDiscNumbers) {
+        const discMap = new Map<number, Track[]>()
+        for (const albumTrack of albumTracks) {
+            const discNo = albumTrack.discNumber!
+            const disc = discMap.get(discNo)
+            if (disc) disc.push(albumTrack)
+            else discMap.set(discNo, [albumTrack])
+        }
+        return buildDiscGroups(discMap)
+    }
+
+    // Strategy 2: ALL tracks have a disc number identifiable from filename or folder path
+    // (e.g. "CD1-01-Title.flac" or ".../CD1/01-Title.flac")
+    const filenameDiscs = albumTracks.map(t => extractDiscNumber(t))
+    if (filenameDiscs.length > 0 && filenameDiscs.every(d => d !== null)) {
+        const discMap = new Map<number, Track[]>()
+        for (let i = 0; i < albumTracks.length; i++) {
+            const discNo = filenameDiscs[i]!
+            const disc = discMap.get(discNo)
+            if (disc) disc.push(albumTracks[i])
+            else discMap.set(discNo, [albumTracks[i]])
+        }
+        return buildDiscGroups(discMap)
+    }
+
+    // Strategy 3 (fallback): infer disc boundaries from trackNumber resets.
+    // This depends on albumTracks preserving the original FileList order —
+    // if the library order places a later disc's tracks first, the disc
+    // numbering will be wrong. No reliable correction is possible without
+    // disc metadata or filename hints.
+    const discs: Track[][] = []
+    let currentDisc: Track[] = []
+    let lastTrackNo = 0
+
     for (const albumTrack of albumTracks) {
-      const trackIndex = allTracks.indexOf(albumTrack)
-      const discNo = albumTrack.discNumber!
-      if (!discMap.has(discNo)) discMap.set(discNo, [])
-      discMap.get(discNo)!.push({ trackIndex, track: albumTrack })
-    }
-    return buildDiscGroups(discMap, allTracks)
-  }
+        const trackNo = albumTrack.trackNumber ?? 0
 
-  // Strategy 2: ALL tracks have a disc number identifiable from filename or folder path
-  // (e.g. "CD1-01-Title.flac" or ".../CD1/01-Title.flac")
-  const filenameDiscs = albumTracks.map(t => extractDiscNumber(t))
-  if (filenameDiscs.length > 0 && filenameDiscs.every(d => d !== null)) {
-    const discMap = new Map<number, { trackIndex: number; track: Track }[]>()
-    for (let i = 0; i < albumTracks.length; i++) {
-      const discNo = filenameDiscs[i]!
-      const trackIndex = allTracks.indexOf(albumTracks[i])
-      if (!discMap.has(discNo)) discMap.set(discNo, [])
-      discMap.get(discNo)!.push({ trackIndex, track: albumTracks[i] })
-    }
-    return buildDiscGroups(discMap, allTracks)
-  }
+        if (currentDisc.length > 0 && (trackNo === 1 || (trackNo > 0 && trackNo < lastTrackNo))) {
+            discs.push(currentDisc)
+            currentDisc = []
+        }
 
-  // Strategy 3 (fallback): infer disc boundaries from trackNumber resets.
-  // This depends on albumTracks preserving the original FileList order —
-  // if the library order places a later disc's tracks first, the disc
-  // numbering will be wrong. No reliable correction is possible without
-  // disc metadata or filename hints.
-  const discs: { trackIndex: number; track: Track }[][] = []
-  let currentDisc: { trackIndex: number; track: Track }[] = []
-  let lastTrackNo = 0
-
-  for (const albumTrack of albumTracks) {
-    const trackIndex = allTracks.indexOf(albumTrack)
-    const trackNo = albumTrack.trackNumber ?? 0
-
-    if (currentDisc.length > 0 && (trackNo === 1 || (trackNo > 0 && trackNo < lastTrackNo))) {
-      discs.push(currentDisc)
-      currentDisc = []
+        currentDisc.push(albumTrack)
+        lastTrackNo = trackNo
     }
 
-    currentDisc.push({ trackIndex, track: albumTrack })
-    lastTrackNo = trackNo
-  }
-
-  if (currentDisc.length > 0) {
-    discs.push(currentDisc)
-  }
-
-  return discs.map((tracks, idx) => {
-    const sortedTracks = [...tracks].sort(
-      (a, b) => (a.track.trackNumber ?? 0) - (b.track.trackNumber ?? 0)
-    )
-    return {
-      discNumber: idx + 1,
-      tracks: sortedTracks,
-      workGroups: groupTracksByWork(allTracks, sortedTracks.map(t => t.trackIndex)),
+    if (currentDisc.length > 0) {
+        discs.push(currentDisc)
     }
-  })
+
+    return discs.map((tracks, idx) => {
+        const sortedTracks = [...tracks].sort(
+            (a, b) => (a.trackNumber ?? 0) - (b.trackNumber ?? 0)
+        )
+        return {
+            discNumber: idx + 1,
+            tracks: sortedTracks,
+            items: groupTracksByWork(sortedTracks),
+        }
+    })
 }
 
-export default function AlbumDetailPage({
-  tracks,
-  currentIndex,
-  onTrackSelect,
-  onPlayAlbum,
-  onOpenSidebar,
-}: AlbumDetailPageProps) {
-  const navigate = useNavigate()
-  const { albumArtist, albumName } = useParams<{ albumArtist: string; albumName: string }>()
-  
-  // Decode URL params
-  const decodedAlbumArtist = albumArtist ? decodeURIComponent(albumArtist) : ''
-  const decodedAlbumName = albumName ? decodeURIComponent(albumName) : ''
-  
-  const album = { name: decodedAlbumName, albumArtist: decodedAlbumArtist }
+// Performers worth naming under a track row. The album artist already heads
+// the page, so only artists that differ from it get their own line.
+function performerArtists(track: Track, albumArtist: string): string[] {
+    const trackArtists = parseArtists(track.artist || '').filter(a => a.length > 0)
+    if (trackArtists.length === 0) return []
+    return trackArtists.join(', ') === parseArtists(albumArtist).join(', ') ? [] : trackArtists
+}
 
-  // Find the album's cover from the first track that has one
-  const albumTracks = tracks.filter(
-    t => t.album === album.name && t.albumArtist === album.albumArtist
-  )
-  const cover = albumTracks.find(t => t.cover)?.cover ?? null
-  const discGroups = groupTracksByDisc(albumTracks, tracks)
-  const albumBadge = getAlbumQualityBadge(albumTracks)
-  const albumDuration = albumTracks.reduce((sum, t) => sum + t.duration, 0)
+export default function AlbumDetailPage() {
+    const {
+        tracks,
+        playlists,
+        currentTrackId,
+        isPlaying,
+        playFromContext,
+        playTrackNext,
+        addTrackToQueue,
+        addTrackToPlaylist,
+        removeFromLibrary,
+        playAlbum,
+    } = useApp()
+    const {albumArtist, albumName} = useParams<{ albumArtist: string; albumName: string }>()
 
-  // Track expanded state for each work group per disc (default: all expanded)
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    const initialSet = new Set<string>()
-    discGroups.forEach(disc => {
-      disc.workGroups.forEach((_, idx) => {
-        initialSet.add(`${disc.discNumber}-${idx}`)
-      })
-    })
-    return initialSet
-  })
+    // Decode URL params
+    const decodedAlbumArtist = albumArtist ? decodeURIComponent(albumArtist) : ''
+    const decodedAlbumName = albumName ? decodeURIComponent(albumName) : ''
 
-  const toggleGroup = (discNumber: number, groupIdx: number) => {
-    const key = `${discNumber}-${groupIdx}`
-    setExpandedGroups(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
-  }
+    const album = {name: decodedAlbumName, albumArtist: decodedAlbumArtist}
 
-  // Which work's "…" menu is open (controlled so the button can open it on click)
-  const [openWorkMenuKey, setOpenWorkMenuKey] = useState<string | null>(null)
-
-  if (albumTracks.length === 0) {
-    return (
-      <div className="px-6 pt-6">
-        <button
-          onClick={() => navigate('/albums')}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft size={16} />
-          Back to Albums
-        </button>
-        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-          <Disc3 size={40} className="mb-4 opacity-30" />
-          <p className="text-lg font-medium">Album not found</p>
-        </div>
-      </div>
+    const albumTracks = useMemo(
+        () => tracks.filter(t => matchesAlbum(t, decodedAlbumName, decodedAlbumArtist)),
+        [tracks, decodedAlbumName, decodedAlbumArtist],
     )
-  }
+    const {cover, totalDuration} = useMemo(() => ({
+        // The album's cover is the first track that carries artwork.
+        cover: albumTracks.find(t => t.cover)?.cover ?? null,
+        totalDuration: albumTracks.reduce((sum, t) => sum + t.duration, 0),
+    }), [albumTracks])
+    const discGroups = useMemo(() => groupTracksByDisc(albumTracks), [albumTracks])
+    const albumBadge = useMemo(() => getAlbumQualityBadge(albumTracks), [albumTracks])
 
-  return (
-    <div className="px-6 pt-6 pb-8 relative">
-      {/* Mobile menu button */}
-      <button
-        onClick={onOpenSidebar}
-        className="lg:hidden absolute top-4 right-4 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <Menu size={20} />
-      </button>
+    // All album track ids in presentation order (disc → track). This is the
+    // playback context for this album: previous/next stay within the album.
+    const albumTrackIds = useMemo(
+        () => discGroups.flatMap(disc => disc.tracks.map(t => t.id)),
+        [discGroups],
+    )
 
-      {/* Back button */}
-      <button
-        onClick={() => navigate('/albums')}
-        aria-label="Back to albums"
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-      >
-        <ArrowLeft size={16} />
-        Back
-      </button>
+    // Play the album starting at the given track.
+    const playAlbumFrom = (trackId: string) => {
+        const start = albumTrackIds.indexOf(trackId)
+        playFromContext(albumTrackIds, start >= 0 ? start : 0)
+    }
 
-      {/* Album header */}
-      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
-        {/* Cover */}
-        <div className="w-40 h-40 sm:w-64 sm:h-64 shrink-0 rounded-lg overflow-hidden bg-muted mx-auto sm:mx-0">
-          {cover ? (
-            <img src={cover} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted">
-              <Disc3 size={40} className="sm:hidden text-muted-foreground/30" />
-              <Disc3 size={56} className="hidden sm:block text-muted-foreground/30" />
-            </div>
-          )}
-        </div>
+    // Works the user has folded up. Everything else is open, so a library that
+    // arrives after this page's first render still shows its works expanded.
+    const [collapsedWorks, setCollapsedWorks] = useState<Set<string>>(() => new Set())
 
-        {/* Info — compact stack centered against the cover */}
-        <div className="flex flex-col justify-center gap-3 min-w-0 h-auto sm:h-64 text-center sm:text-left">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Album
-          </p>
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{album.name}</h1>
-            <div className="text-sm sm:text-base text-muted-foreground">
-              {parseArtists(album.albumArtist).map((artist, idx) => (
-                <span key={idx}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      navigate(`/artists/${encodeURIComponent(artist)}`)
-                    }}
-                    className="hover:text-foreground transition-colors"
-                  >
-                    {artist}
-                  </button>
-                  {idx < parseArtists(album.albumArtist).length - 1 && ', '}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-muted-foreground">
-            {albumBadge && <AudioQualityBadge badge={albumBadge} />}
+    const toggleGroup = (key: string) => {
+        setCollapsedWorks(prev => {
+            const next = new Set(prev)
+            if (next.has(key)) {
+                next.delete(key)
+            } else {
+                next.add(key)
+            }
+            return next
+        })
+    }
+
+    if (albumTracks.length === 0) {
+        return (
+            <NotFoundState
+                title="Album not found"
+                icon={Disc3}
+                to="/albums"
+                backLabel="Back to albums"
+            />
+        )
+    }
+
+    return (
+        <div className="page-gutter pt-6 pb-8">
+            <BackLink to="/albums" label="Back to albums"/>
+
+            {/* Album header */}
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
+                {/* Cover */}
+                <ArtPicker covers={cover ? [cover] : []} name={`${album.name} ${album.albumArtist}`}/>
+
+                {/* Info — compact stack centered against the cover */}
+                <div className="flex flex-col justify-center gap-3 min-w-0 h-auto sm:h-64 text-center sm:text-left">
+                    <div className="space-y-2">
+                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{album.name}{albumBadge &&
+                            <AudioQualityBadge badge={albumBadge}/>}</h1>
+                        <ArtistLinks
+                            artists={parseArtists(album.albumArtist)}
+                            className="text-sm sm:text-base"
+                        />
+                    </div>
+                    <div
+                        className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-muted-foreground">
             <span>
               {albumTracks[0]?.releaseDate && `${albumTracks[0].releaseDate} · `}
-              {albumTracks.length} {albumTracks.length === 1 ? 'track' : 'tracks'} · {formatDurationLong(albumDuration)}
+                {albumTracks.length} {albumTracks.length === 1 ? 'track' : 'tracks'}
             </span>
-          </div>
-          {onPlayAlbum && (
-            <div className="flex justify-center sm:justify-start pt-1">
-              <button
-                type="button"
-                onClick={() => onPlayAlbum(album.name, album.albumArtist)}
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                <Play size={15} fill="currentColor" />
-                Play
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Track list */}
-      <div className="border-t border-border pt-4">
-        {discGroups.map((discGroup, discGroupIdx) => (
-          <div key={discGroup.discNumber} className={discGroupIdx > 0 ? 'mt-8' : ''}>
-            {/* Disc header */}
-            <div className="mb-2 flex items-center gap-2 px-1">
-              <span className="h-px w-4 bg-border" aria-hidden="true" />
-              <h2 className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/65">Disc {discGroup.discNumber}</h2>
-            </div>
-
-            {/* Work groups for this disc */}
-            {discGroup.workGroups.map((group, groupIdx) => {
-              const hasMovements = group.entries.some(e => e.movement !== null)
-
-              // Non-classical or single-track group without movements:
-              // display as regular track rows
-              if (!hasMovements) {
-                return (
-                  <div key={groupIdx} className="mb-2">
-                    {group.entries.map(entry => {
-                      const track = tracks[entry.trackIndex]
-                      const isActive = entry.trackIndex === currentIndex
-
-                      return (
-                        <ContextMenu key={entry.trackIndex}>
-                          <ContextMenuTrigger asChild>
-                            <div
-                              onClick={() => onTrackSelect(entry.trackIndex)}
-                              className={cn(
-                                'w-full flex items-center gap-3 pr-3 py-2 rounded-md text-left transition-colors cursor-pointer',
-                                isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-                              )}
-                            >
-                              <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                                {track.trackNumber != null && track.trackNumber > 0 
-                                  ? String(track.trackNumber).padStart(2, '0') 
-                                  : ''}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className={cn('text-sm truncate', isActive && 'font-medium')}>
-                                  {track.title}
-                                </p>
-                                {(() => {
-                                  const trackArtists = parseArtists(track.artist || '').filter(a => a.length > 0)
-                                  const albumArtists = parseArtists(album.albumArtist)
-
-                                  // The album artist is already in the header — only name
-                                  // performers that differ from it.
-                                  if (
-                                    trackArtists.length > 0 &&
-                                    trackArtists.join(', ') !== albumArtists.join(', ')
-                                  ) {
-                                    return (
-                                      <p className={cn('text-xs truncate mt-0.5', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                                        {trackArtists.map((artist, idx) => (
-                                          <span key={idx}>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                navigate(`/artists/${encodeURIComponent(artist)}`)
-                                              }}
-                                              onContextMenu={(e) => {
-                                                e.stopPropagation()
-                                              }}
-                                              className={cn('transition-colors', isActive ? 'hover:text-primary-foreground' : 'hover:text-foreground')}
-                                            >
-                                              {artist}
-                                            </button>
-                                            {idx < trackArtists.length - 1 && ', '}
-                                          </span>
-                                        ))}
-                                      </p>
-                                    )
-                                  }
-                                  return null
-                                })()}
-                              </div>
-                              <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                                {formatTime(track.duration)}
-                              </span>
-                            </div>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent className="w-64">
-                            <ContextMenuItem onClick={() => onTrackSelect(entry.trackIndex)}>
-                              <Play className="mr-2 h-4 w-4" />
-                              Play
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <SkipBack className="mr-2 h-4 w-4" />
-                              Play Previous
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <SkipForward className="mr-2 h-4 w-4" />
-                              Play Next
-                            </ContextMenuItem>
-                            <ContextMenuSeparator />
-                            <ContextMenuItem>
-                              <ListMusic className="mr-2 h-4 w-4" />
-                              Add to Queue
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
-                      )
-                    })}
-                  </div>
-                )
-              }
-
-              // Classical work with movements
-              const groupKey = `${discGroup.discNumber}-${groupIdx}`
-              const isExpanded = expandedGroups.has(groupKey)
-              return (
-                <div key={groupIdx} className="mb-4">
-                  {/* Work header — clicking the row toggles expand/collapse */}
-                  <div
-                    onClick={() => toggleGroup(discGroup.discNumber, groupIdx)}
-                    className="w-full flex items-center gap-2 pr-3 py-2 rounded-md text-left hover:bg-accent transition-colors cursor-pointer"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{group.work}</p>
-                      {/* Show artists below work title in both states */}
-                      {(() => {
-                        // Use albumArtist from the first track in the group
-                        const firstTrack = tracks[group.entries[0].trackIndex]
-                        const allArtists = parseArtists(firstTrack.artist || '').filter(a => a.length > 0)
-                        if (allArtists.length > 0) {
-                          return (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                              {allArtists.map((artist, idx) => (
-                                <span key={idx}>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      navigate(`/artists/${encodeURIComponent(artist)}`)
-                                    }}
-                                    onContextMenu={(e) => {
-                                      e.stopPropagation()
-                                    }}
-                                    className="hover:text-foreground transition-colors"
-                                  >
-                                    {artist}
-                                  </button>
-                                  {idx < allArtists.length - 1 && ', '}
-                                </span>
-                              ))}
-                            </p>
-                          )
-                        }
-                        return null
-                      })()}
                     </div>
-                    {/* Total duration + work actions on the right */}
-                    <span className="shrink-0 flex items-center gap-1 text-muted-foreground text-sm">
-                      {(() => {
-                        const totalDuration = group.entries.reduce(
-                          (sum, entry) => sum + (tracks[entry.trackIndex].duration || 0),
-                          0
-                        )
-                        return formatTime(totalDuration)
-                      })()}
-                      <ContextMenu
-                        open={openWorkMenuKey === groupKey}
-                        onOpenChange={open => setOpenWorkMenuKey(open ? groupKey : null)}
-                      >
-                        <ContextMenuTrigger asChild>
-                          <button
-                            type="button"
-                            aria-label={`Actions for ${group.work}`}
-                            onClick={e => {
-                              e.stopPropagation()
-                              setOpenWorkMenuKey(groupKey)
-                            }}
-                            className="p-1 rounded-md hover:text-foreground transition-colors"
-                          >
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </ContextMenuTrigger>
-                        <ContextMenuContent className="w-56">
-                          <ContextMenuItem onClick={() => onTrackSelect(group.entries[0].trackIndex)}>
-                            <Play className="mr-2 h-4 w-4" />
-                            Play Work
-                          </ContextMenuItem>
-                          <ContextMenuItem onClick={() => toggleGroup(discGroup.discNumber, groupIdx)}>
-                            {isExpanded
-                              ? <ChevronDown className="mr-2 h-4 w-4" />
-                              : <ChevronUp className="mr-2 h-4 w-4" />}
-                            {isExpanded ? 'Collapse Movements' : 'Expand Movements'}
-                          </ContextMenuItem>
-                        </ContextMenuContent>
-                      </ContextMenu>
-                    </span>
-                  </div>
-
-                  {/* Movement rows - only show if expanded */}
-                  {isExpanded && (
-                    <>
-                      {group.entries.map((entry, entryIdx) => {
-                        const track = tracks[entry.trackIndex]
-                        const isActive = entry.trackIndex === currentIndex
-                        const movementLabel = entry.movement || track.title
-                        // Sequential numbering within the work (starting from first track's trackNumber or 1)
-                        const baseNumber = group.entries[0].trackIndex !== undefined 
-                          ? tracks[group.entries[0].trackIndex].trackNumber ?? 1 
-                          : 1
-                        const sequentialNumber = typeof baseNumber === 'number' 
-                          ? baseNumber + entryIdx 
-                          : entryIdx + 1
-
-                        return (
-                          <ContextMenu key={entry.trackIndex}>
-                            <ContextMenuTrigger asChild>
-                              <div
-                                onClick={() => onTrackSelect(entry.trackIndex)}
-                                className={cn(
-                                  'w-full flex items-center gap-3 pr-3 py-1.5 rounded-md text-left transition-colors cursor-pointer',
-                                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-                                )}
-                              >
-                                <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                                  {String(sequentialNumber).padStart(2, '0')}
-                                </span>
-                                <p className={cn('min-w-0 flex-1 text-sm truncate', isActive && 'font-medium')}>
-                                  {movementLabel}
-                                </p>
-                                <span className={cn('text-sm tabular-nums shrink-0 whitespace-nowrap', isActive ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                                  {formatTime(track.duration)}
-                                </span>
-                              </div>
-                            </ContextMenuTrigger>
-                            <ContextMenuContent className="w-64">
-                              <ContextMenuItem onClick={() => onTrackSelect(entry.trackIndex)}>
-                                <Play className="mr-2 h-4 w-4" />
-                                Play
-                              </ContextMenuItem>
-                              <ContextMenuItem>
-                                <SkipBack className="mr-2 h-4 w-4" />
-                                Play Previous
-                              </ContextMenuItem>
-                              <ContextMenuItem>
-                                <SkipForward className="mr-2 h-4 w-4" />
-                                Play Next
-                              </ContextMenuItem>
-                              <ContextMenuSeparator />
-                              <ContextMenuItem>
-                                <ListMusic className="mr-2 h-4 w-4" />
-                                Add to Queue
-                              </ContextMenuItem>
-                            </ContextMenuContent>
-                          </ContextMenu>
-                        )
-                      })}
-                    </>
-                  )}
+                    <div className="flex justify-center sm:justify-start pt-1">
+                        <PlayButton
+                            onClick={() => playAlbum(album.name, album.albumArtist)}
+                            label={`Play ${album.name}`}
+                        />
+                    </div>
                 </div>
-              )
-            })}
-          </div>
-        ))}
-        
-        {/* Track list footer */}
-        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border text-xs text-muted-foreground">
-          {/* Left: copyright */}
-          {albumTracks[0]?.copyright && (
-            <p>{albumTracks[0].copyright}</p>
-          )}
-          
-          {/* Right: total duration */}
-          <p className="ml-auto">
-            {formatDurationLong(albumTracks.reduce((sum, t) => sum + t.duration, 0))}
-          </p>
+            </div>
+
+            {/* Track list */}
+            <div>
+                {discGroups.map(discGroup => (
+                    <div key={discGroup.discNumber}>
+                        {/* Disc header — only meaningful when the album really spans discs */}
+                        {discGroups.length > 1 && (
+                            <div className="flex items-center">
+                                <h2 className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground">Disc {discGroup.discNumber}</h2>
+                            </div>
+                        )}
+
+                        <div className="divide-y divide-border/60">
+                            {buildDiscRows(discGroup, collapsedWorks).map(row => {
+                                if (row.kind === 'work') {
+                                    const {work, itemIdx} = row
+                                    const key = workKey(discGroup.discNumber, work)
+                                    const isExpanded = !collapsedWorks.has(key)
+                                    const workDuration = work.entries.reduce(
+                                        (sum, entry) => sum + (entry.track.duration || 0),
+                                        0
+                                    )
+
+                                    // Work header — clicking the row toggles its movements
+                                    return (
+                                        <div
+                                            key={`work-${itemIdx}`}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-expanded={isExpanded}
+                                            onClick={() => toggleGroup(key)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault()
+                                                    toggleGroup(key)
+                                                }
+                                            }}
+                                            className="w-full flex items-center gap-3 pr-3 py-2 text-left hover:bg-accent/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                                        >
+                                            {/* Same box as a track's number column, so the work title
+                          starts where the movement titles do */}
+                                            <span className="min-w-5 shrink-0 flex items-center">
+                        <ChevronDown
+                            size={14}
+                            aria-hidden="true"
+                            className={cn(
+                                'text-muted-foreground transition-transform',
+                                !isExpanded && '-rotate-90'
+                            )}
+                        />
+                      </span>
+                                            <div className="flex-1 min-w-0">
+                                                {work.composer ? (
+                                                    <p className="text-sm truncate">
+
+                                                        <span className="font-[550]">{work.work}</span>
+                                                        <span className="text-muted-foreground">{' '}</span>
+                                                        <span className="text-muted-foreground">{'('}</span>
+                                                        <span className="font-normal">{work.composer}</span>
+                                                        <span className="text-muted-foreground">{')'}</span>
+                                                    </p>
+
+                                                ) : (
+                                                    <p className="text-sm font-semibold truncate">{work.work}</p>
+                                                )}
+                                            </div>
+                                            <span
+                                                className="shrink-0 text-muted-foreground text-sm tabular-nums whitespace-nowrap">
+                        {formatTime(workDuration)}
+                      </span>
+                                        </div>
+                                    )
+                                }
+
+                                const track = row.kind === 'movement' ? row.entry.track : row.track
+                                const isActive = track.id === currentTrackId
+                                const performers = performerArtists(track, album.albumArtist)
+                                // Movements are numbered within their work; standalone tracks use
+                                // their own tag number and show nothing when it is missing.
+                                const number = row.kind === 'movement'
+                                    ? String((row.work.entries[0].track.trackNumber ?? 1) + row.entryIdx).padStart(2, '0')
+                                    : track.trackNumber != null && track.trackNumber > 0
+                                        ? String(track.trackNumber).padStart(2, '0')
+                                        : ''
+                                // A standalone track keeps its full original title — the parse was
+                                // only a candidate. Grouped tracks show their section instead.
+                                const label = row.kind === 'movement' ? row.entry.movement : track.title
+
+                                return (
+                                    <ContextMenu key={track.id}>
+                                        <ContextMenuTrigger asChild>
+                                            <div
+                                                onClick={() => playAlbumFrom(track.id)}
+                                                className="w-full flex items-center gap-3 pr-3 py-2 text-left transition-colors cursor-pointer hover:bg-accent/50"
+                                            >
+                        <span className="min-w-5 shrink-0 text-sm tabular-nums whitespace-nowrap text-muted-foreground">
+                          {isActive && isPlaying ? <NowPlayingBars/> : number}
+                        </span>
+                                                {/* Fixed at the height of a title plus performer line so
+                            every row matches; a row without performers centres
+                            its title against the number instead. */}
+                                                <div className="min-w-0 flex-1 min-h-9.5 flex flex-col justify-center">
+                                                    <p className={cn('text-sm truncate', isActive && 'text-primary font-medium')}>
+                                                        <Link
+                                                            to={trackPath(track.id)}
+                                                            className="hover:underline"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {label}
+                                                        </Link>
+                                                    </p>
+                                                    <ArtistLinks artists={performers} className="mt-0.5"/>
+                                                </div>
+                                                <span
+                                                    className="text-sm tabular-nums shrink-0 whitespace-nowrap text-muted-foreground">
+                          {formatTime(track.duration)}
+                        </span>
+                                            </div>
+                                        </ContextMenuTrigger>
+                                        <TrackMenuContent
+                                            track={track}
+                                            playlists={playlists}
+                                            onPlayNext={playTrackNext}
+                                            onAddToQueue={addTrackToQueue}
+                                            onAddToPlaylist={addTrackToPlaylist}
+                                            links={{artist: true, composer: true}}
+                                            onRemoveFromLibrary={removeFromLibrary}
+                                        />
+                                    </ContextMenu>
+                                )
+                            })}
+                        </div>
+                    </div>
+                ))}
+
+                {/* Track list footer */}
+                <div className="flex items-center justify-between border-t border-border text-xs text-muted-foreground">
+                    {/* Left: copyright */}
+                    {albumTracks[0]?.copyright && (
+                        <p className="whitespace-pre-line mt-2">
+                            {albumTracks[0].copyright.replace('℗', '\n℗')}
+                        </p>
+                    )}
+                    {/* Right: total duration */}
+                    <p className="ml-auto">
+                        {formatDurationLong(totalDuration)}
+                    </p>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  )
+    )
 }

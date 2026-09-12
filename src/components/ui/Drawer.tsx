@@ -25,31 +25,56 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    className={cn('fixed inset-0 z-50 bg-black/80', className)}
+    // Edges spelled out rather than `inset-0`: a caller that shortens the
+    // overlay must override one edge without dropping the other three.
+    className={cn('fixed top-0 right-0 bottom-0 left-0 z-50 bg-black/80', className)}
     {...props}
   />
 ))
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
+type DrawerDirection = 'top' | 'bottom' | 'left' | 'right'
+
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        'fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background',
-        className
-      )}
-      {...props}
-    >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-))
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {
+    direction?: DrawerDirection
+    /** Restyle the scrim this drawer renders — e.g. transparent for a non-modal panel. */
+    overlayClassName?: string
+  }
+>(({ className, children, direction = 'bottom', overlayClassName, ...props }, ref) => {
+  const isSide = direction === 'left' || direction === 'right'
+
+  return (
+    <DrawerPortal>
+      <DrawerOverlay className={overlayClassName} />
+      <DrawerPrimitive.Content
+        ref={ref}
+        className={cn(
+          'fixed z-50 flex flex-col border bg-background',
+          // Height comes from the two edges, not `h-full`, so an override of
+          // `bottom` shortens the panel instead of fighting a fixed height.
+          isSide
+            ? cn(
+                'top-0 bottom-0 w-full max-w-[380px]',
+                direction === 'right'
+                  ? 'right-0 rounded-l-[10px]'
+                  : 'left-0 rounded-r-[10px]',
+              )
+            : 'inset-x-0 bottom-0 mt-24 h-auto rounded-t-[10px]',
+          className
+        )}
+        {...props}
+      >
+        {/* The drag-handle pill only reads as an affordance on a bottom sheet. */}
+        {!isSide && (
+          <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+        )}
+        {children}
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  )
+})
 DrawerContent.displayName = 'DrawerContent'
 
 const DrawerHeader = ({

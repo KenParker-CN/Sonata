@@ -1,144 +1,88 @@
-import type { Track } from '@/types/music'
 import type { Artist } from '@/utils/groupArtists'
+import type { SortOption } from '@/hooks/useSort'
+import { applySort, useSort } from '@/hooks/useSort'
+import { compareNames } from '@/utils/collate'
 import { groupArtists } from '@/utils/groupArtists'
-import { Users, Menu, ArrowUpDown } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from '@/components/ui/ContextMenu'
+import { useMemo } from 'react'
+import { useViewMode } from '@/hooks/useViewMode'
+import ArtistCard from '@/components/ArtistCard'
+import ArtistListRow from '@/components/ArtistListRow'
+import CardGrid from '@/components/CardGrid'
+import EmptyState from '@/components/EmptyState'
+import PageHeader from '@/components/PageHeader'
+import SearchInput from '@/components/SearchInput'
+import SearchEmptyState from '@/components/SearchEmptyState'
 import Shelf from '@/components/Shelf'
+import SortSelect from '@/components/SortSelect'
+import ViewModeToggle from '@/components/ViewModeToggle'
+import { matchesSearch } from '@/utils/search'
+import { useSearch } from '@/hooks/useSearch'
+import { useApp } from '@/contexts/app'
 
-interface ArtistsPageProps {
-  tracks: Track[]
-  onPlayArtist?: (artistName: string) => void
-  onPlayNext?: (artistName: string) => void
-  onAddToPlaylist?: (artistName: string) => void
-  onOpenSidebar?: () => void
+type ArtistKey = 'name' | 'tracks' | 'albums' | 'duration'
+
+const ARTIST_SORT_OPTIONS: SortOption<ArtistKey>[] = [
+  { value: 'name', label: 'Name', natural: 'asc' },
+  { value: 'tracks', label: 'Tracks', natural: 'desc' },
+  { value: 'albums', label: 'Albums', natural: 'desc' },
+  { value: 'duration', label: 'Duration', natural: 'desc' },
+]
+
+// Each comparator is the ascending side only — the direction lives in useSort
+const ARTIST_COMPARATORS: Record<ArtistKey, (a: Artist, b: Artist) => number> = {
+  name: (a, b) => compareNames(a.name, b.name),
+  tracks: (a, b) => a.trackCount - b.trackCount,
+  albums: (a, b) => a.albumCount - b.albumCount,
+  duration: (a, b) => a.duration - b.duration,
 }
 
-interface ArtistCardProps {
-  artist: Artist
-  onPlayArtist?: (artistName: string) => void
-  onPlayNext?: (artistName: string) => void
-  onAddToPlaylist?: (artistName: string) => void
-  className?: string
-}
+const NAME_OF = (artist: Artist) => artist.name
 
-// Shared by the "Top Artists" shelf and the full grid so both carry the same context menu.
-function ArtistCard({ artist, onPlayArtist, onPlayNext, onAddToPlaylist, className }: ArtistCardProps) {
-  const navigate = useNavigate()
+export default function ArtistsPage() {
+  const { tracks } = useApp()
+  const sort = useSort('artists', ARTIST_SORT_OPTIONS, 'name')
+  const [view, setView] = useViewMode('artists')
+  const grouped = useMemo(() => groupArtists(tracks), [tracks])
 
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={className}
-          onClick={() => navigate(`/artists/${encodeURIComponent(artist.name)}`)}
-        >
-          {/* Profile skeleton — 1:1 aspect ratio */}
-          <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 transition-transform group-hover:scale-[1.02]">
-            <div className="w-full h-full flex items-center justify-center bg-muted">
-              <Users size={40} className="text-muted-foreground/20" />
-            </div>
-          </div>
-
-          {/* Artist info */}
-          <p className="text-sm font-semibold truncate leading-snug mb-1">
-            {artist.name}
-          </p>
-          <p className="text-xs text-muted-foreground truncate">
-            {artist.trackCount} {artist.trackCount === 1 ? 'track' : 'tracks'}
-          </p>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
-        <ContextMenuItem onClick={() => navigate(`/artists/${encodeURIComponent(artist.name)}`)}>
-          Open Artist
-        </ContextMenuItem>
-        {onPlayArtist && (
-          <ContextMenuItem onClick={() => onPlayArtist(artist.name)}>
-            Play
-          </ContextMenuItem>
-        )}
-        {onPlayNext && (
-          <ContextMenuItem onClick={() => onPlayNext(artist.name)}>
-            Play Next
-          </ContextMenuItem>
-        )}
-        {onAddToPlaylist && (
-          <ContextMenuSub>
-            <ContextMenuSubTrigger>Add to Playlist</ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-48">
-              <ContextMenuItem disabled>
-                No playlists available
-              </ContextMenuItem>
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-        )}
-      </ContextMenuContent>
-    </ContextMenu>
+  const artists = useMemo(
+    () => applySort(grouped, sort, ARTIST_COMPARATORS, NAME_OF),
+    [grouped, sort],
   )
-}
 
-export default function ArtistsPage({
-  tracks,
-  onPlayArtist,
-  onPlayNext,
-  onAddToPlaylist,
-  onOpenSidebar
-}: ArtistsPageProps) {
-  const [sortBy, setSortBy] = useState<'name' | 'mostTracks' | 'fewestTracks'>('name')
-  const artists = useMemo(() => {
-    const groupedArtists = groupArtists(tracks)
-    return groupedArtists.sort((a, b) => {
-      if (sortBy === 'mostTracks') return b.trackCount - a.trackCount || a.name.localeCompare(b.name)
-      if (sortBy === 'fewestTracks') return a.trackCount - b.trackCount || a.name.localeCompare(b.name)
-      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-    })
-  }, [tracks, sortBy])
+  // Filtering happens after the sort, so a query keeps the order on screen.
+  const search = useSearch()
+  const visible = useMemo(
+    () =>
+      search.terms.length === 0
+        ? artists
+        : artists.filter(artist => matchesSearch(search.terms, artist.name)),
+    [artists, search.terms],
+  )
 
   // Artists have no artwork, so "recently added" carries no visual signal — the
-  // shelf surfaces the busiest artists instead.
+  // shelf surfaces the busiest artists instead, whatever the grid is sorted by.
   const topArtists = useMemo(
-    () => groupArtists(tracks).sort((a, b) => b.trackCount - a.trackCount || a.name.localeCompare(b.name)).slice(0, 12),
-    [tracks]
+    () =>
+      applySort(grouped, { key: 'tracks', direction: 'desc' }, ARTIST_COMPARATORS, NAME_OF).slice(
+        0,
+        12,
+      ),
+    [grouped],
   )
-
-  const cardHandlers = { onPlayArtist, onPlayNext, onAddToPlaylist }
 
   return (
     <>
-      {/* Page header */}
-      <div className="px-6 pt-6 pb-4 relative">
-        {/* Mobile menu button */}
-        <button
-          onClick={onOpenSidebar}
-          aria-label="Open navigation"
-          className="lg:hidden absolute top-4 right-4 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Menu size={20} />
-        </button>
-        <h1 className="text-2xl font-bold tracking-tight">Artists</h1>
-        <p className="text-sm text-muted-foreground mt-1">Browse your artists</p>
-      </div>
+      <PageHeader title="Artists" />
 
-      {/* Content */}
-      <div className="px-6 pb-8">
-        {tracks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-            <p className="text-lg font-medium">No artists in your library yet.</p>
-            <p className="text-sm mt-1">Click "Add Music" to import your library</p>
-          </div>
+      <div className="page-gutter pb-8">
+        {artists.length === 0 ? (
+          <EmptyState
+            title="No artists in your library yet."
+            hint="Click “Add Music” to import your library"
+          />
         ) : (
           <>
-            {artists.length > topArtists.length && (
+            {artists.length > topArtists.length && !search.active && (
               <section className="mb-10">
                 <h2 className="text-lg font-semibold tracking-tight mb-4">
                   Top Artists
@@ -149,8 +93,7 @@ export default function ArtistsPage({
                       <ArtistCard
                         key={`top-${artist.name}`}
                         artist={artist}
-                        {...cardHandlers}
-                        className="group cursor-pointer shrink-0 snap-start w-[220px]"
+                        className="shrink-0 snap-start w-[220px]"
                       />
                     ))}
                   </div>
@@ -159,41 +102,32 @@ export default function ArtistsPage({
             )}
 
             <section>
-              <div className="mb-5 flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
                 <h2 className="text-sm font-semibold tracking-tight text-foreground">
                   All Artists
                 </h2>
-                <div className="flex items-center gap-3">
-                  <p className="text-xs text-muted-foreground">{artists.length} {artists.length === 1 ? 'artist' : 'artists'}</p>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <ArrowUpDown size={14} aria-hidden="true" />
-                    <span className="sr-only">Sort artists by</span>
-                    <select
-                      value={sortBy}
-                      onChange={event => setSortBy(event.target.value as typeof sortBy)}
-                      aria-label="Sort artists by"
-                      className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="name">Name</option>
-                      <option value="mostTracks">Most tracks</option>
-                      <option value="fewestTracks">Fewest tracks</option>
-                    </select>
-                  </label>
+                <div className="flex flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3">
+                  <p className="text-xs text-muted-foreground">{visible.length} {visible.length === 1 ? 'artist' : 'artists'}</p>
+                  <SortSelect label="Sort artists by" sort={sort} />
+                  <ViewModeToggle label="Artists view" value={view} onChange={setView} />
+                  <SearchInput label="Search artists" value={search.query} onChange={search.setQuery} />
                 </div>
               </div>
-              <div
-                className="grid gap-6"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}
-              >
-                {artists.map(artist => (
-                  <ArtistCard
-                    key={artist.name}
-                    artist={artist}
-                    {...cardHandlers}
-                    className="group cursor-pointer"
-                  />
-                ))}
-              </div>
+              {visible.length === 0 ? (
+                <SearchEmptyState query={search.query} onClear={() => search.setQuery('')} />
+              ) : view === 'grid' ? (
+                <CardGrid>
+                  {visible.map(artist => (
+                    <ArtistCard key={artist.name} artist={artist} />
+                  ))}
+                </CardGrid>
+              ) : (
+                <div className="flex flex-col">
+                  {visible.map(artist => (
+                    <ArtistListRow key={artist.name} artist={artist} />
+                  ))}
+                </div>
+              )}
             </section>
           </>
         )}

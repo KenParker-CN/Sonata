@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // animate-ui writes these files verbatim; the project's rules are not theirs,
+  // and any local fix is lost the next time the registry installs a component.
+  globalIgnores(['dist', 'src/components/animate-ui', 'src/hooks/use-is-in-view.tsx']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

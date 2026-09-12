@@ -1,86 +1,103 @@
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
 import { useImportManager } from '@/hooks/useImportManager'
 import { revokeTrackUrls } from '@/services/metadata'
+import {
+  collectAudioEntries,
+  isAudioFileName,
+  isPersistenceSupported,
+  pickMusicDirectory,
+} from '@/services/musicFolders'
+import { buildLibrary, type RestoredLibrary } from '@/services/restoreLibrary'
+import {
+  clearStoredLibrary,
+  deleteArt,
+  deleteStoredTracks,
+  saveArt,
+  savePlaylists,
+} from '@/services/libraryStore'
+import {
+  type ArtId,
+  loadCustomArt,
+  playlistArtId,
+  prepareArt,
+} from '@/services/customArt'
 import type { Playlist, Track } from '@/types/music'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import Sidebar from '@/components/Sidebar'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import AppLayout from '@/components/AppLayout'
 import PlayerBar from '@/components/PlayerBar'
-import Breadcrumb from '@/components/Breadcrumb'
+import QueuePanel from '@/components/QueuePanel'
 import ImportProgressToast from '@/components/ImportProgressToast'
+import LibraryStatusBanner from '@/components/LibraryStatusBanner'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import { PlaylistDetailsDialog } from '@/components/PlaylistDialogs'
+import { AppProvider, type AppContextValue } from '@/contexts/app'
 import LibraryPage from '@/pages/LibraryPage'
 import ArtistsPage from '@/pages/ArtistsPage'
 import ArtistDetailPage from '@/pages/ArtistDetailPage'
+import ComposersPage from '@/pages/ComposersPage'
+import ComposerDetailPage from '@/pages/ComposerDetailPage'
 import AlbumsPage from '@/pages/AlbumsPage'
 import AlbumDetailPage from '@/pages/AlbumDetailPage'
 import PlaylistsPage from '@/pages/PlaylistsPage'
-import { getFileKey } from '@/utils/getFileKey'
-import { parseArtists } from '@/utils/parseArtists'
+import PlaylistDetailPage from '@/pages/PlaylistDetailPage'
+import TrackDetailPage from '@/pages/TrackDetailPage'
+import { getFilePath } from '@/utils/getFileKey'
+import { touch, type PlaylistDetails } from '@/utils/playlist'
+import { matchesAlbum } from '@/utils/groupAlbums'
+import { hasComposer } from '@/utils/groupComposers'
+import { hasArtist } from '@/utils/groupArtists'
 
-// Scroll position preservation for grid pages
-interface ScrollPositions {
-  artists: number
-  albums: number
+/** Ids of every track an entity action applies to, in library order. */
+function matchingIds(tracks: Track[], matches: (track: Track) => boolean): string[] {
+  const ids: string[] = []
+  for (const track of tracks) {
+    if (matches(track)) ids.push(track.id)
+  }
+  return ids
 }
 
-// Wrapper component that provides navigation context to pages
-function PageWrapper({ children, onImportMusic, theme = 'light', onToggleTheme = () => {}, handleNavigate, onMainRef, sidebarOpen, onSidebarClose }: {
-  children: React.ReactNode
-  onImportMusic?: () => void
-  theme?: 'light' | 'dark'
-  onToggleTheme?: () => void
-  handleNavigate: (path: string) => void
-  onMainRef?: (ref: HTMLElement | null) => void
-  sidebarOpen?: boolean
-  onSidebarClose?: () => void
-}) {
-  const location = useLocation()
-  const mainRef = useRef<HTMLElement>(null)
-
-  // Expose mainRef to parent for scroll position management
-  useEffect(() => {
-    if (onMainRef && mainRef.current) {
-      onMainRef(mainRef.current)
-    }
-  }, [onMainRef])
-
-  // Scroll to top when route changes
-  useEffect(() => {
-    const container = mainRef.current
-    if (container) {
-      requestAnimationFrame(() => {
-        container.scrollTo(0, 0)
-      })
-    }
-  }, [location.pathname])
-
+// The playhead tick re-renders App several times a second. With no props to
+// compare, memo stops that render from reaching the mounted page and its lists.
+// Pages still update when the app context changes value — memo does not block
+// context propagation.
+const PageRoutes = memo(function PageRoutes() {
   return (
-    <>
-      <Sidebar 
-        onNavigate={handleNavigate} 
-        onImportMusic={onImportMusic}
-        theme={theme}
-        onToggleTheme={onToggleTheme}
-        isOpen={sidebarOpen}
-        onClose={onSidebarClose}
-      />
-      <main ref={mainRef} className="flex-1 overflow-y-auto">
-        <Breadcrumb />
-        {children}
-      </main>
-    </>
+    <div className="flex-1 flex overflow-hidden relative">
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/library" element={<LibraryPage />} />
+          <Route path="/artists" element={<ArtistsPage />} />
+          <Route path="/artists/:artistName" element={<ArtistDetailPage />} />
+          <Route path="/composers" element={<ComposersPage />} />
+          <Route path="/composers/:composerName" element={<ComposerDetailPage />} />
+          <Route path="/albums" element={<AlbumsPage />} />
+          <Route path="/albums/:albumArtist/:albumName" element={<AlbumDetailPage />} />
+          <Route path="/playlists" element={<PlaylistsPage />} />
+          <Route path="/playlists/:playlistId" element={<PlaylistDetailPage />} />
+          <Route path="/tracks/:trackId" element={<TrackDetailPage />} />
+          <Route path="/" element={<Navigate to="/library" replace />} />
+        </Route>
+      </Routes>
+    </div>
   )
-}
+})
 
 function App() {
   const [tracks, setTracks] = useState<Track[]>([])
   const [playlists, setPlaylists] = useState<Playlist[]>([])
+  // Uploaded images, as object URLs valid for this page. Like track artwork,
+  // they are rebuilt from the cached blobs on every load.
+  const [artUrls, setArtUrls] = useState<Partial<Record<ArtId, string>>>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [queueOpen, setQueueOpen] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return localStorage.getItem('sonata-theme') === 'dark' ? 'dark' : 'light'
   })
   const importInputRef = useRef<HTMLInputElement>(null)
   const tracksRef = useRef(tracks)
+  const artUrlsRef = useRef(artUrls)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -91,41 +108,69 @@ function App() {
     tracksRef.current = tracks
   }, [tracks])
 
-  // Global import manager - persists across route changes
-  const handleTracksParsed = useCallback((newTracks: Track[]) => {
-    setTracks(prev => [...prev, ...newTracks])
+  useEffect(() => {
+    artUrlsRef.current = artUrls
+  }, [artUrls])
+
+  useEffect(() => {
+    void loadCustomArt()
+      .then(setArtUrls)
+      .catch(error => console.error('Failed to read the saved images', error))
   }, [])
 
-  const { progress, importFiles } = useImportManager(handleTracksParsed)
+  // Global import manager - persists across route changes
+  const handleTracksParsed = useCallback((newTracks: Track[]) => {
+    // A folder picked again after an edit re-imports tracks that are already
+    // here; ids come from the file, so this is where duplicates drop out.
+    setTracks(prev => {
+      const known = new Set(prev.map(t => t.id))
+      return [...prev, ...newTracks.filter(t => !known.has(t.id))]
+    })
+  }, [])
+
+  const { progress, importEntries } = useImportManager(handleTracksParsed)
+
+  const [libraryStatus, setLibraryStatus] = useState<RestoredLibrary | null>(null)
+  const hydratedRef = useRef(false)
 
   const {
-    currentIndex,
+    currentTrackId,
+    currentQueueIndex,
+    queue,
     isPlaying,
     currentTime,
     duration,
     volume,
     repeatMode,
     shuffle,
+    playbackError,
     canPrev,
     canNext,
-    playTrack,
+    playFromContext,
+    playQueueItemAt,
     togglePlay,
     playNext,
+    queueNext,
+    queueNextMany,
     playPrev,
     seek,
     setVolume,
     cycleRepeatMode,
     toggleShuffle,
+    addToQueue,
+    removeFromQueue,
+    moveQueueItem,
   } = useAudioPlayer(tracks)
 
-  // Auto-play first track when going from empty to having tracks
-  const prevLengthRef = useRef(0)
+  // The first import into an empty library starts playback. A restored library
+  // marks this as done before its tracks arrive, and clearing the cache doesn't
+  // undo it, so nothing ever starts playing on its own a second time.
+  const hasAutoPlayedRef = useRef(false)
   useEffect(() => {
-    if (prevLengthRef.current === 0 && tracks.length > 0) {
-      playTrack(0)
-    }
-    prevLengthRef.current = tracks.length
-  }, [tracks, playTrack])
+    if (hasAutoPlayedRef.current || tracks.length === 0) return
+    hasAutoPlayedRef.current = true
+    playFromContext(tracks.map(t => t.id), 0)
+  }, [tracks, playFromContext])
 
   // Revoke object URLs on unmount to prevent memory leaks
   useEffect(() => {
@@ -134,37 +179,57 @@ function App() {
     }
   }, [])
 
+  const applyLibrary = useCallback((restored: RestoredLibrary) => {
+    if (restored.tracks.length > 0) hasAutoPlayedRef.current = true
+    setTracks(restored.tracks)
+    setPlaylists(restored.playlists)
+    setLibraryStatus(restored)
+    hydratedRef.current = true
+  }, [])
+
+  const restoreStartedRef = useRef(false)
+  useEffect(() => {
+    if (restoreStartedRef.current) return
+    restoreStartedRef.current = true
+    void buildLibrary(false)
+      .then(applyLibrary)
+      .catch(error => console.error('Failed to restore the library', error))
+  }, [applyLibrary])
+
+  // Chrome only lets a handle be re-authorised from a user gesture, which is
+  // what the banner's Reconnect button provides.
+  const handleReconnectLibrary = useCallback(() => {
+    void buildLibrary(true)
+      .then(applyLibrary)
+      .catch(error => console.error('Failed to reconnect the library', error))
+  }, [applyLibrary])
+
+  // Before the first restore resolves, `playlists` is still the empty initial
+  // state and would overwrite what was just read.
+  useEffect(() => {
+    if (hydratedRef.current) void savePlaylists(playlists)
+  }, [playlists])
+
   const handleFilesSelected = useCallback(async (files: File[]) => {
-    // Build a Set of existing fileKeys from the library
-    // Filter out tracks without fileKey (legacy tracks)
-    const existingKeys = new Set<string>(
-      tracks.map(t => t.fileKey).filter((key): key is string => key != null)
+    const entries = files
+      .filter(file => file.type.startsWith('audio/') || isAudioFileName(file.name))
+      .map(file => ({ path: getFilePath(file), getFile: async () => file }))
+    await importEntries(entries, null)
+  }, [importEntries])
+
+  const importMusic = useCallback(async () => {
+    if (!isPersistenceSupported()) {
+      importInputRef.current?.click()
+      return
+    }
+    const root = await pickMusicDirectory()
+    if (!root) return
+    const entries = await collectAudioEntries(root)
+    await importEntries(
+      entries.map(entry => ({ path: entry.path, getFile: () => entry.handle.getFile() })),
+      { id: root.name, handle: root },
     )
-    
-    // Filter out duplicates before passing to import manager
-    const audioFiles = files.filter(f => f.type.startsWith('audio/'))
-    const uniqueFiles: File[] = []
-    
-    for (const file of audioFiles) {
-      const fileKey = getFileKey(file)
-      if (!existingKeys.has(fileKey)) {
-        existingKeys.add(fileKey)
-        uniqueFiles.push(file)
-      }
-    }
-    
-    if (uniqueFiles.length > 0) {
-      await importFiles(uniqueFiles)
-    }
-  }, [tracks, importFiles])
-
-  const handleImportMusic = useCallback(() => {
-    importInputRef.current?.click()
-  }, [])
-
-  const handleToggleTheme = useCallback(() => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light')
-  }, [])
+  }, [importEntries])
 
   const handleImportInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -174,314 +239,348 @@ function App() {
     event.target.value = ''
   }, [handleFilesSelected])
 
-  const handleCreatePlaylist = useCallback((name: string) => {
+  const openSidebar = useCallback(() => setSidebarOpen(true), [])
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+  const toggleSidebarCollapsed = useCallback(
+    () => setSidebarCollapsed(prev => !prev),
+    [],
+  )
+
+  const handleCreatePlaylist = useCallback(({ name, description }: PlaylistDetails) => {
+    const now = Date.now()
     const newPlaylist: Playlist = {
-      id: `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      id: `playlist-${now}-${Math.random().toString(36).slice(2, 9)}`,
       name: name.trim(),
       trackIds: [],
+      description: description.trim() || null,
+      createdAt: now,
+      updatedAt: now,
     }
     setPlaylists(prev => [...prev, newPlaylist])
   }, [])
 
-  const handleDeletePlaylist = useCallback((id: string) => {
-    setPlaylists(prev => prev.filter(p => p.id !== id))
+  const setCustomArt = useCallback(async (id: ArtId, file: File) => {
+    const blob = await prepareArt(file)
+    await saveArt({ id, blob })
+    const url = URL.createObjectURL(blob)
+    const previous = artUrlsRef.current[id]
+    if (previous) URL.revokeObjectURL(previous)
+    setArtUrls(prev => ({ ...prev, [id]: url }))
   }, [])
 
-  const handleOpenPlaylist = useCallback((playlistId: string) => {
-    // TODO: Navigate to playlist detail page (not yet implemented)
-    console.log('Open Playlist:', playlistId)
+  const clearCustomArt = useCallback(async (id: ArtId) => {
+    await deleteArt(id)
+    const previous = artUrlsRef.current[id]
+    if (previous) URL.revokeObjectURL(previous)
+    setArtUrls(prev => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
   }, [])
 
-  const handlePlayPlaylist = useCallback((playlistId: string) => {
-    // TODO: Implement play playlist functionality
-    console.log('Play Playlist:', playlistId)
+  const deletePlaylist = useCallback((playlistId: string) => {
+    setPlaylists(prev => prev.filter(p => p.id !== playlistId))
+    // The playlist's own uploaded cover goes with it, or the blob would outlive
+    // the only thing that could ever address it.
+    void clearCustomArt(playlistArtId(playlistId)).catch(error => {
+      console.error('Failed to drop the saved playlist image', error)
+    })
+  }, [clearCustomArt])
+
+  const playPlaylist = useCallback((playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId)
+    if (playlist) playFromContext(playlist.trackIds, 0)
+  }, [playlists, playFromContext])
+
+  const removeTrackFromPlaylist = useCallback((playlistId: string, trackId: string) => {
+    const now = Date.now()
+    setPlaylists(prev => prev.map(p =>
+      p.id === playlistId
+        ? touch({ ...p, trackIds: p.trackIds.filter(id => id !== trackId) }, now)
+        : p,
+    ))
   }, [])
 
-  // Navigation handler with scroll preservation
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  const handlePlayNext = useCallback((track: Track) => {
-    // TODO: Implement queue functionality
-    console.log('Play Next:', track.title)
+  const addTrackIdsToPlaylist = useCallback((trackIds: string[], playlistId: string) => {
+    const now = Date.now()
+    setPlaylists(prev => prev.map(p => {
+      if (p.id !== playlistId) return p
+      const missing = trackIds.filter(id => !p.trackIds.includes(id))
+      return missing.length === 0 ? p : touch({ ...p, trackIds: [...p.trackIds, ...missing] }, now)
+    }))
   }, [])
 
-  const handleAddToPlaylist = useCallback((trackId: string) => {
-    // TODO: Implement add to playlist with dialog
-    console.log('Add to Playlist:', trackId)
-  }, [])
+  const addTrackToPlaylist = useCallback((trackId: string, playlistId: string) => {
+    addTrackIdsToPlaylist([trackId], playlistId)
+  }, [addTrackIdsToPlaylist])
 
-  const handleGoToAlbum = useCallback((album: { name: string; albumArtist: string }) => {
-    navigate(`/albums/${encodeURIComponent(album.albumArtist)}/${encodeURIComponent(album.name)}`)
-  }, [navigate])
+  const addTracksToPlaylist = useCallback((playlistId: string, trackIds: string[]) => {
+    addTrackIdsToPlaylist(trackIds, playlistId)
+  }, [addTrackIdsToPlaylist])
 
-  const handleGoToArtist = useCallback((artistName: string) => {
-    navigate(`/artists/${encodeURIComponent(artistName)}`)
-  }, [navigate])
-
-  const handleRemoveFromLibrary = useCallback((trackId: string) => {
-    setTracks(prev => prev.filter(t => t.id !== trackId))
-  }, [])
-
-  const handlePlayAlbum = useCallback((albumName: string, albumArtist: string) => {
-    // Find all tracks in this album and play from the first one
-    const albumTracks = tracks.filter(t => t.album === albumName && t.albumArtist === albumArtist)
-    if (albumTracks.length > 0) {
-      const firstTrackIndex = tracks.findIndex(t => t.id === albumTracks[0].id)
-      if (firstTrackIndex >= 0) {
-        playTrack(firstTrackIndex)
-      }
-    }
-  }, [tracks, playTrack])
-
-  const handlePlayAlbumNext = useCallback((albumName: string, albumArtist: string) => {
-    // TODO: Implement queue functionality for albums
-    console.log('Play Album Next:', albumName, albumArtist)
-  }, [])
-
-  const handleAddAlbumToPlaylist = useCallback((albumName: string, albumArtist: string) => {
-    // TODO: Implement add album to playlist with dialog
-    console.log('Add Album to Playlist:', albumName, albumArtist)
-  }, [])
-
-  const handleRemoveAlbumFromLibrary = useCallback((albumName: string, albumArtist: string) => {
-    setTracks(prev => prev.filter(t => !(t.album === albumName && t.albumArtist === albumArtist)))
-  }, [])
-
-  const handlePlayArtist = useCallback((artistName: string) => {
-    // Find all tracks by this artist and play from the first one
-    const artistTracks = tracks.filter(t => parseArtists(t.artist).includes(artistName))
-    if (artistTracks.length > 0) {
-      const firstTrackIndex = tracks.findIndex(t => t.id === artistTracks[0].id)
-      if (firstTrackIndex >= 0) {
-        playTrack(firstTrackIndex)
-      }
-    }
-  }, [tracks, playTrack])
-
-  const handlePlayArtistNext = useCallback((artistName: string) => {
-    // TODO: Implement queue functionality for artists
-    console.log('Play Artist Next:', artistName)
-  }, [])
-
-  const handleAddArtistToPlaylist = useCallback((artistName: string) => {
-    // TODO: Implement add artist to playlist with dialog
-    console.log('Add Artist to Playlist:', artistName)
-  }, [])
-
-  const currentTrack = tracks[currentIndex] ?? null
-
-  const mainRefForNav = useRef<HTMLElement | null>(null)
-  const [scrollPositions, setScrollPositions] = useState<ScrollPositions>({
-    artists: 0,
-    albums: 0,
-  })
-
-  const saveScrollPosition = useCallback((page: 'artists' | 'albums') => {
-    if (mainRefForNav.current) {
-      setScrollPositions(prev => ({
-        ...prev,
-        [page]: mainRefForNav.current!.scrollTop,
+  // Reordering happens in the stored order, so a track that left the library
+  // still holds its place until the user drops it.
+  const moveTrackInPlaylist = useCallback(
+    (playlistId: string, trackId: string, direction: 'up' | 'down') => {
+      const now = Date.now()
+      setPlaylists(prev => prev.map(p => {
+        if (p.id !== playlistId) return p
+        const trackIds = [...p.trackIds]
+        const from = trackIds.indexOf(trackId)
+        const to = direction === 'up' ? from - 1 : from + 1
+        if (from < 0 || to < 0 || to >= trackIds.length) return p
+        const [moved] = trackIds.splice(from, 1)
+        trackIds.splice(to, 0, moved)
+        return touch({ ...p, trackIds }, now)
       }))
-    }
+    },
+    [],
+  )
+
+  const updatePlaylist = useCallback((playlistId: string, details: PlaylistDetails) => {
+    const name = details.name.trim()
+    if (!name) return
+    const description = details.description.trim() || null
+    const now = Date.now()
+    setPlaylists(prev => prev.map(p => {
+      if (p.id !== playlistId) return p
+      if (p.name === name && (p.description ?? null) === description) return p
+      return touch({ ...p, name, description }, now)
+    }))
   }, [])
 
-  const restoreScrollPosition = useCallback((page: 'artists' | 'albums') => {
-    const scrollTop = scrollPositions[page]
-    if (mainRefForNav.current && scrollTop > 0) {
-      requestAnimationFrame(() => {
-        mainRefForNav.current?.scrollTo(0, scrollTop)
-      })
-    }
-  }, [scrollPositions])
+  const removeFromLibrary = useCallback((trackId: string) => {
+    const removed = tracks.filter(t => t.id === trackId)
+    if (removed.length === 0) return
+    removed.forEach(revokeTrackUrls)
+    setTracks(prev => prev.filter(t => t.id !== trackId))
+    setPlaylists(prev => prev.map(p =>
+      p.trackIds.includes(trackId)
+        ? { ...p, trackIds: p.trackIds.filter(id => id !== trackId) }
+        : p,
+    ))
+    void deleteStoredTracks(removed.map(t => t.id)).catch(error => {
+      console.error('Failed to drop the cached track', error)
+    })
+  }, [tracks])
 
-  const handleNavigate = useCallback((path: string) => {
-    const currentPath = location.pathname
-    
-    // Save scroll position for grid pages before navigating
-    if (currentPath === '/artists') {
-      saveScrollPosition('artists')
-    } else if (currentPath === '/albums') {
-      saveScrollPosition('albums')
-    }
-    
-    navigate(path)
-    
-    // Restore scroll position when going back to grid pages
-    if (path === '/artists' || path === '/albums') {
-      restoreScrollPosition(path.slice(1) as 'artists' | 'albums')
-    }
-  }, [location.pathname, navigate, saveScrollPosition, restoreScrollPosition])
+  const playAlbum = useCallback((albumName: string, albumArtist: string) => {
+    const trackIds = matchingIds(tracks, t => matchesAlbum(t, albumName, albumArtist))
+    if (trackIds.length > 0) playFromContext(trackIds, 0)
+  }, [tracks, playFromContext])
+
+  const playAlbumNext = useCallback((albumName: string, albumArtist: string) => {
+    queueNextMany(matchingIds(tracks, t => matchesAlbum(t, albumName, albumArtist)))
+  }, [tracks, queueNextMany])
+
+  const addAlbumToPlaylist = useCallback((albumName: string, albumArtist: string, playlistId: string) => {
+    addTrackIdsToPlaylist(
+      tracks.filter(t => matchesAlbum(t, albumName, albumArtist)).map(t => t.id),
+      playlistId,
+    )
+  }, [tracks, addTrackIdsToPlaylist])
+
+  const removeAlbumFromLibrary = useCallback((albumName: string, albumArtist: string) => {
+    const removed = tracks.filter(t => matchesAlbum(t, albumName, albumArtist))
+    if (removed.length === 0) return
+    const removedIds = new Set(removed.map(t => t.id))
+    removed.forEach(revokeTrackUrls)
+    setTracks(prev => prev.filter(t => !removedIds.has(t.id)))
+    setPlaylists(prev => prev.map(p => {
+      const kept = p.trackIds.filter(id => !removedIds.has(id))
+      return kept.length === p.trackIds.length ? p : { ...p, trackIds: kept }
+    }))
+  }, [tracks])
+
+  const playArtist = useCallback((artistName: string) => {
+    const trackIds = matchingIds(tracks, t => hasArtist(t, artistName))
+    if (trackIds.length > 0) playFromContext(trackIds, 0)
+  }, [tracks, playFromContext])
+
+  const playArtistNext = useCallback((artistName: string) => {
+    queueNextMany(matchingIds(tracks, t => hasArtist(t, artistName)))
+  }, [tracks, queueNextMany])
+
+  const addArtistToPlaylist = useCallback((artistName: string, playlistId: string) => {
+    addTrackIdsToPlaylist(
+      tracks.filter(t => hasArtist(t, artistName)).map(t => t.id),
+      playlistId,
+    )
+  }, [tracks, addTrackIdsToPlaylist])
+
+  const playComposer = useCallback((composerName: string) => {
+    const trackIds = matchingIds(tracks, t => hasComposer(t, composerName))
+    if (trackIds.length > 0) playFromContext(trackIds, 0)
+  }, [tracks, playFromContext])
+
+  const playComposerNext = useCallback((composerName: string) => {
+    queueNextMany(matchingIds(tracks, t => hasComposer(t, composerName)))
+  }, [tracks, queueNextMany])
+
+  const addComposerToPlaylist = useCallback((composerName: string, playlistId: string) => {
+    addTrackIdsToPlaylist(
+      tracks.filter(t => hasComposer(t, composerName)).map(t => t.id),
+      playlistId,
+    )
+  }, [tracks, addTrackIdsToPlaylist])
+
+  // One id→track lookup for the whole app: pages resolve playlists and queues
+  // through this instead of scanning `tracks` per row.
+  const trackById = useMemo(() => new Map(tracks.map(t => [t.id, t])), [tracks])
+
+  const currentTrack = currentTrackId === null
+    ? null
+    : trackById.get(currentTrackId) ?? null
+
+  const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false)
+  const requestCreatePlaylist = useCallback(() => setCreatePlaylistOpen(true), [])
+  const [resetLibraryOpen, setResetLibraryOpen] = useState(false)
+  const requestResetLibrary = useCallback(() => setResetLibraryOpen(true), [])
+
+  // A reload reads back what is cached, so clearing the cache also clears the
+  // running library — otherwise the two disagree until the next restart.
+  const handleResetLibrary = useCallback(() => {
+    void clearStoredLibrary()
+      .then(() => {
+        tracks.forEach(revokeTrackUrls)
+        setTracks([])
+        setPlaylists([])
+        Object.values(artUrlsRef.current).forEach(url => {
+          if (url) URL.revokeObjectURL(url)
+        })
+        setArtUrls({})
+        setLibraryStatus(null)
+      })
+      .catch(error => console.error('Failed to clear the cached library', error))
+  }, [tracks])
+
+  const appValue = useMemo<AppContextValue>(
+    () => ({
+      tracks,
+      trackById,
+      playlists,
+      currentTrackId,
+      isPlaying,
+      playFromContext,
+      playTrackNext: queueNext,
+      addTrackToQueue: addToQueue,
+      addTrackToPlaylist,
+      removeFromLibrary,
+      playAlbum,
+      playAlbumNext,
+      addAlbumToPlaylist,
+      removeAlbumFromLibrary,
+      playArtist,
+      playArtistNext,
+      addArtistToPlaylist,
+      playComposer,
+      playComposerNext,
+      addComposerToPlaylist,
+      requestCreatePlaylist,
+      playPlaylist,
+      updatePlaylist,
+      moveTrackInPlaylist,
+      deletePlaylist,
+      removeTrackFromPlaylist,
+      addTracksToPlaylist,
+      artUrls,
+      setCustomArt,
+      clearCustomArt,
+      requestResetLibrary,
+      theme,
+      setTheme,
+      importMusic,
+      sidebarOpen,
+      sidebarCollapsed,
+      toggleSidebarCollapsed,
+      openSidebar,
+      closeSidebar,
+    }),
+    [
+      tracks,
+      trackById,
+      playlists,
+      currentTrackId,
+      isPlaying,
+      playFromContext,
+      queueNext,
+      addToQueue,
+      addTrackToPlaylist,
+      removeFromLibrary,
+      playAlbum,
+      playAlbumNext,
+      addAlbumToPlaylist,
+      removeAlbumFromLibrary,
+      playArtist,
+      playArtistNext,
+      addArtistToPlaylist,
+      playComposer,
+      playComposerNext,
+      addComposerToPlaylist,
+      requestCreatePlaylist,
+      playPlaylist,
+      updatePlaylist,
+      moveTrackInPlaylist,
+      deletePlaylist,
+      removeTrackFromPlaylist,
+      addTracksToPlaylist,
+      artUrls,
+      setCustomArt,
+      clearCustomArt,
+      requestResetLibrary,
+      theme,
+      setTheme,
+      importMusic,
+      sidebarOpen,
+      sidebarCollapsed,
+      toggleSidebarCollapsed,
+      openSidebar,
+      closeSidebar,
+    ],
+  )
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Global import progress toast */}
+      {/* Fallback for browsers without the File System Access API: pick files directly. */}
       <input
         ref={importInputRef}
         type="file"
-        accept="audio/*"
+        accept="audio/*,.mp3,.m4a,.m4b,.aac,.flac,.wav,.ogg,.oga,.opus,.weba,.aif,.aiff,.alac,.wma"
         multiple
-        {...({ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
         onChange={handleImportInputChange}
         className="hidden"
       />
       <ImportProgressToast progress={progress} />
 
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+      {libraryStatus && (
+        <LibraryStatusBanner
+          rootNames={libraryStatus.rootsNeedingAccess}
+          tracksNeedingAccess={libraryStatus.tracksNeedingAccess}
+          persistenceUnavailable={libraryStatus.persistenceUnavailable && tracks.length > 0}
+          onReconnect={handleReconnectLibrary}
+        />
+      )}
 
-        <Routes>
-          <Route path="/library" element={
-            <PageWrapper 
-              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
-              handleNavigate={handleNavigate} 
-              onMainRef={(ref) => { mainRefForNav.current = ref }}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
-            >
-              <LibraryPage
-                tracks={tracks}
-                currentIndex={currentIndex}
-                onTrackSelect={playTrack}
-                onPlayNext={handlePlayNext}
-                onAddToPlaylist={handleAddToPlaylist}
-                onGoToAlbum={handleGoToAlbum}
-                onGoToArtist={handleGoToArtist}
-                onRemoveFromLibrary={handleRemoveFromLibrary}
-                onImportMusic={handleImportMusic}
-                onOpenSidebar={() => setSidebarOpen(true)}
-              />
-            </PageWrapper>
-          } />
-          
-          <Route path="/artists" element={
-            <PageWrapper 
-              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
-              handleNavigate={handleNavigate} 
-              onMainRef={(ref) => { mainRefForNav.current = ref }}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
-            >
-              <ArtistsPage 
-                tracks={tracks}
-                onPlayArtist={handlePlayArtist}
-                onPlayNext={handlePlayArtistNext}
-                onAddToPlaylist={handleAddArtistToPlaylist}
-                onOpenSidebar={() => setSidebarOpen(true)} 
-              />
-            </PageWrapper>
-          } />
-          
-          <Route path="/artists/:artistName" element={
-            <PageWrapper 
-              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
-              handleNavigate={handleNavigate} 
-              onMainRef={(ref) => { mainRefForNav.current = ref }}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
-            >
-              <ArtistDetailPage
-                tracks={tracks}
-                currentIndex={currentIndex}
-                onTrackSelect={playTrack}
-                onOpenSidebar={() => setSidebarOpen(true)}
-                onPlayNext={handlePlayNext}
-                onAddToPlaylist={handleAddToPlaylist}
-                onGoToAlbum={handleGoToAlbum}
-                onGoToArtist={handleGoToArtist}
-                onRemoveFromLibrary={handleRemoveFromLibrary}
-              />
-            </PageWrapper>
-          } />
-          
-          <Route path="/albums" element={
-            <PageWrapper 
-              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
-              handleNavigate={handleNavigate} 
-              onMainRef={(ref) => { mainRefForNav.current = ref }}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
-            >
-              <AlbumsPage 
-                tracks={tracks}
-                onPlayAlbum={handlePlayAlbum}
-                onPlayNext={handlePlayAlbumNext}
-                onAddToPlaylist={handleAddAlbumToPlaylist}
-                onRemoveFromLibrary={handleRemoveAlbumFromLibrary}
-                onOpenSidebar={() => setSidebarOpen(true)} 
-              />
-            </PageWrapper>
-          } />
-          
-          <Route path="/albums/:albumArtist/:albumName" element={
-            <PageWrapper 
-              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
-              handleNavigate={handleNavigate} 
-              onMainRef={(ref) => { mainRefForNav.current = ref }}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
-            >
-              <AlbumDetailPage
-                tracks={tracks}
-                currentIndex={currentIndex}
-                onTrackSelect={playTrack}
-                onPlayAlbum={handlePlayAlbum}
-                onOpenSidebar={() => setSidebarOpen(true)}
-              />
-            </PageWrapper>
-          } />
-          
-          <Route path="/playlists" element={
-            <PageWrapper 
-              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
-              handleNavigate={handleNavigate} 
-              onMainRef={(ref) => { mainRefForNav.current = ref }}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
-            >
-              <PlaylistsPage
-                playlists={playlists}
-                tracks={tracks}
-                onCreatePlaylist={handleCreatePlaylist}
-                onDeletePlaylist={handleDeletePlaylist}
-                onOpenSidebar={() => setSidebarOpen(true)}
-                onOpenPlaylist={handleOpenPlaylist}
-                onPlayPlaylist={handlePlayPlaylist}
-              />
-            </PageWrapper>
-          } />
-          
-          {/* Default route redirects to library */}
-          <Route path="/" element={
-            <PageWrapper 
-              onImportMusic={handleImportMusic} theme={theme} onToggleTheme={handleToggleTheme} 
-              handleNavigate={handleNavigate} 
-              onMainRef={(ref) => { mainRefForNav.current = ref }}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
-            >
-              <LibraryPage
-                tracks={tracks}
-                currentIndex={currentIndex}
-                onTrackSelect={playTrack}
-                onPlayNext={handlePlayNext}
-                onAddToPlaylist={handleAddToPlaylist}
-                onGoToAlbum={handleGoToAlbum}
-                onGoToArtist={handleGoToArtist}
-                onRemoveFromLibrary={handleRemoveFromLibrary}
-                onImportMusic={handleImportMusic}
-                onOpenSidebar={() => setSidebarOpen(true)}
-              />
-            </PageWrapper>
-          } />
-        </Routes>
-      </div>
+      <AppProvider value={appValue}>
+        <PageRoutes />
+
+        <PlaylistDetailsDialog
+          open={createPlaylistOpen}
+          onOpenChange={setCreatePlaylistOpen}
+          mode="create"
+          onSubmit={handleCreatePlaylist}
+        />
+
+        <ConfirmDialog
+          open={resetLibraryOpen}
+          onOpenChange={setResetLibraryOpen}
+          title="Clear cached library"
+          description={`Sonata will forget ${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'} and ${playlists.length} ${playlists.length === 1 ? 'playlist' : 'playlists'}. Your audio files stay on disk — pick the folder again to load them.`}
+          confirmLabel="Clear"
+          onConfirm={handleResetLibrary}
+        />
+      </AppProvider>
 
       {/* PlayerBar is outside the page switch — it persists across navigation */}
       <PlayerBar
@@ -495,6 +594,8 @@ function App() {
         volume={volume}
         canPrev={canPrev}
         canNext={canNext}
+        queueCount={queue.length > 0 ? queue.length - currentQueueIndex - 1 : 0}
+        playbackError={playbackError}
         onTogglePlay={togglePlay}
         onPrev={playPrev}
         onNext={playNext}
@@ -502,6 +603,21 @@ function App() {
         onVolumeChange={setVolume}
         onCycleRepeatMode={cycleRepeatMode}
         onToggleShuffle={toggleShuffle}
+        onOpenQueue={() => setQueueOpen(true)}
+      />
+
+      {/* Queue panel overlays the whole app */}
+      <QueuePanel
+        open={queueOpen}
+        onClose={() => setQueueOpen(false)}
+        queue={queue}
+        currentQueueIndex={currentQueueIndex}
+        tracks={tracks}
+        playlists={playlists}
+        onPlayQueueItem={playQueueItemAt}
+        onRemoveQueueItem={removeFromQueue}
+        onMoveQueueItem={moveQueueItem}
+        onAddToPlaylist={addTrackToPlaylist}
       />
     </div>
   )

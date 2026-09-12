@@ -1,20 +1,15 @@
 import { parseBlob } from 'music-metadata-browser'
-import type { Track, Lyrics } from '../types/music'
-import { getFileKey } from '../utils/getFileKey'
-import { parseLyrics } from '../utils/parseLyrics'
+import type { Track } from '../types/music'
+import { makeFileKey, trackIdFor } from '../utils/getFileKey'
 
-let trackIdCounter = 0
-
-function generateTrackId(): string {
-  trackIdCounter += 1
-  return `track-${Date.now()}-${trackIdCounter}`
-}
-
-export async function parseTrackFile(file: File): Promise<Track> {
+// `path` is the track's location relative to the folder the user picked, which
+// is what persistence later re-matches the cached metadata against.
+export async function parseTrackFile(file: File, path: string): Promise<Track> {
   const url = URL.createObjectURL(file)
-  const fileKey = getFileKey(file)
+  const fileKey = makeFileKey(path, file.size, file.lastModified)
   let artist = ''
   let albumArtist = 'Unknown Artist'
+  let composer: string | null = null
   let title = file.name.replace(/\.[^.]+$/, '')
   let album = ''
   let trackNumber: number | null = null
@@ -26,7 +21,8 @@ export async function parseTrackFile(file: File): Promise<Track> {
   let bitDepth: number | null = null
   let sampleRate: number | null = null
   let bitrate: number | null = null
-  let lyrics: Lyrics | null = null
+  let codec: string | null = null
+  let lossless: boolean | null = null
 
   try {
     const metadata = await parseBlob(file)
@@ -39,45 +35,15 @@ export async function parseTrackFile(file: File): Promise<Track> {
     bitDepth = metadata.format.bitsPerSample ?? null
     sampleRate = metadata.format.sampleRate ?? null
     bitrate = metadata.format.bitrate ?? null
-
-    // Extract lyrics from metadata
-    // Priority: SYLT (synced lyrics in ID3v2) > USLT/common.lyrics (unsynced)
-    // Note: metadata.common.lyrics may contain LRC-formatted text with timestamps
-    // We parse it using our parseLyrics utility which handles both synced and unsynced formats
-    
-    // Check for embedded lyrics in various sources
-    let rawLyrics: string | undefined
-    
-    // Try common.lyrics first (music-metadata normalizes various lyric tags here)
-    if (metadata.common.lyrics && metadata.common.lyrics.length > 0) {
-      // lyrics is an array of strings, take the first one
-      rawLyrics = metadata.common.lyrics[0]
-    }
-    
-    // If no common lyrics, check native tags for SYLT (ID3v2 synced lyrics) or USLT
-    if (!rawLyrics && metadata.native) {
-      // Check ID3v2.3 or ID3v2.4 native tags
-      const id3Tags = metadata.native['ID3v2.3'] || metadata.native['ID3v2.4']
-      if (id3Tags) {
-        // Look for SYLT (synchronized lyrics) or USLT (unsynchronized lyrics)
-        const syltTag = id3Tags.find(tag => tag.id === 'SYLT')
-        const usltTag = id3Tags.find(tag => tag.id === 'USLT')
-        
-        if (syltTag?.value?.text) {
-          rawLyrics = syltTag.value.text
-        } else if (usltTag?.value?.text) {
-          rawLyrics = usltTag.value.text
-        }
-      }
-    }
-    
-    // Parse the raw lyrics content
-    if (rawLyrics) {
-      lyrics = parseLyrics(rawLyrics)
-    }
+    codec = metadata.format.codec ?? null
+    lossless = metadata.format.lossless ?? null
 
     // Album artist fallback: albumartist → artist → 'Unknown Artist'
     albumArtist = metadata.common.albumartist || metadata.common.artist || 'Unknown Artist'
+
+    // Composer from the audio metadata tag (COMPOSER/TCOM).
+    // music-metadata exposes it as an array; do NOT fall back to the title/filename.
+    composer = (metadata.common.composer && metadata.common.composer[0]) || null
 
     // Track number from metadata (track is { no, of } object)
     const trackNo = metadata.common.track?.no
@@ -86,19 +52,27 @@ export async function parseTrackFile(file: File): Promise<Track> {
     }
 
     // Disc number from metadata. music-metadata exposes it as common.disk
-    // (generic tag id "disk"); fall back to common.disc for other builds.
-    const discNo = (metadata.common as any).disk?.no ?? (metadata.common as any).disc?.no
+    const discNo = metadata.common.disk?.no
     if (typeof discNo === 'number' && !isNaN(discNo)) {
       discNumber = discNo
     }
 
-    // Release date from metadata (date or year field)
-    const dateValue = metadata.common.date || metadata.common.year
+    const dateValue = metadata.common.originaldate ?? metadata.common.date
+
     if (dateValue) {
-      // Extract just the year from various date formats (e.g., "2023", "2023-05-15", etc.)
-      const yearMatch = String(dateValue).match(/^(\d{4})/)
-      if (yearMatch) {
-        releaseDate = yearMatch[1]
+      // originaldate 可能是 { year, month, day } 对象或字符串
+      if (typeof dateValue === 'object' && 'year' in dateValue) {
+        const { year, month, day } = dateValue as { year: number; month?: number; day?: number }
+        const parts = [year.toString()]
+        if (month) {
+          parts.push(month.toString().padStart(2, '0'))
+          if (day) {
+            parts.push(day.toString().padStart(2, '0'))
+          }
+        }
+        releaseDate = parts.join('-')
+      } else {
+        releaseDate = String(dateValue)
       }
     }
 
@@ -115,24 +89,26 @@ export async function parseTrackFile(file: File): Promise<Track> {
   }
 
   return {
-    id: generateTrackId(),
+    id: trackIdFor(fileKey),
     url,
     artist,
     title,
     album,
     albumArtist,
+    composer,
     trackNumber,
     discNumber,
     cover,
     duration,
     fileKey,
-    filePath: file.webkitRelativePath || file.name,
+    filePath: path,
     releaseDate,
     copyright,
     bitDepth,
     sampleRate,
     bitrate,
-    lyrics,
+    codec,
+    lossless,
   }
 }
 
