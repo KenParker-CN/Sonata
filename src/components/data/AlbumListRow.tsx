@@ -1,9 +1,9 @@
 import type { Album } from '@/utils/groupAlbums'
 import { albumPath } from '@/utils/routes'
 import { Link } from 'react-router-dom'
-import AlbumContextMenu from '@/components/AlbumContextMenu'
-import ArtistLinks from '@/components/ArtistLinks'
-import GeneratedArt from '@/components/GeneratedArt'
+import AlbumContextMenu from '@/components/context-menus/AlbumContextMenu'
+import ArtistLinks from '@/components/data/ArtistLinks'
+import GeneratedArt from '@/components/media/GeneratedArt'
 import { useApp } from '@/contexts/app'
 
 interface AlbumListRowProps {
@@ -43,7 +43,7 @@ export default function AlbumListRow({ album, meta }: AlbumListRowProps) {
 
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{meta}</span>
 
-        {/* Stretched link â€” the row's own click target, layered behind the
+        {/* Stretched link â€?the row's own click target, layered behind the
             z-raised artist links so both stay clickable without nested <a>. */}
         <Link
           to={albumPath(album.name, album.albumArtist)}
@@ -54,3 +54,4 @@ export default function AlbumListRow({ album, meta }: AlbumListRowProps) {
     </AlbumContextMenu>
   )
 }
+

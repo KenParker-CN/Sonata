@@ -6,16 +6,16 @@ import { useViewMode } from '@/hooks/useViewMode'
 import { compareNames } from '@/utils/collate'
 import { groupAlbums } from '@/utils/groupAlbums'
 import { useMemo } from 'react'
-import AlbumCard from '@/components/AlbumCard'
-import CardGrid from '@/components/CardGrid'
-import AlbumListRow from '@/components/AlbumListRow'
-import PageHeader from '@/components/PageHeader'
-import EmptyState from '@/components/EmptyState'
-import SearchInput from '@/components/SearchInput'
-import SearchEmptyState from '@/components/SearchEmptyState'
-import Shelf from '@/components/Shelf'
-import SortSelect from '@/components/SortSelect'
-import ViewModeToggle from '@/components/ViewModeToggle'
+import AlbumCard from '@/components/data/AlbumCard'
+import CardGrid from '@/components/data/CardGrid'
+import AlbumListRow from '@/components/data/AlbumListRow'
+import PageHeader from '@/components/layout/PageHeader'
+import EmptyState from '@/components/feedback/EmptyState'
+import SearchInput from '@/components/navigation/SearchInput'
+import SearchEmptyState from '@/components/feedback/SearchEmptyState'
+import Shelf from '@/components/data/Shelf'
+import SortSelect from '@/components/navigation/SortSelect'
+import ViewModeToggle from '@/components/navigation/ViewModeToggle'
 import { matchesSearch } from '@/utils/search'
 import { useSearch } from '@/hooks/useSearch'
 import { useApp } from '@/contexts/app'
@@ -38,7 +38,7 @@ interface AlbumRow {
   year: number | null
   trackCount: number
   duration: number
-  /** Highest library index the album occupies — imports append, so this is its arrival. */
+  /** Highest library index the album occupies �?imports append, so this is its arrival. */
   addedAt: number
 }
 
@@ -120,7 +120,7 @@ export default function AlbumsPage() {
         {albums.length === 0 ? (
           <EmptyState
             title="No albums in your library yet."
-            hint="Click “Add Music” to import your library"
+            hint="Click “Add Music to import your library"
           />
         ) : (
           <>
@@ -135,7 +135,7 @@ export default function AlbumsPage() {
                       <AlbumCard
                         key={`recent-${album.name}::${album.albumArtist}`}
                         album={album}
-                        className="shrink-0 snap-start w-[220px]"
+                        className="shrink-0 snap-start w-55"
                       />
                     ))}
                   </div>
@@ -184,3 +184,4 @@ export default function AlbumsPage() {
     </>
   )
 }
+

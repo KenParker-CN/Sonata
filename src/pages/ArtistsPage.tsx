@@ -5,14 +5,14 @@ import { compareNames } from '@/utils/collate'
 import { groupArtists } from '@/utils/groupArtists'
 import { useMemo } from 'react'
 import { groupByInitial, sectionLetters } from '@/utils/alphabet'
-import AlphabetIndex from '@/components/AlphabetIndex'
-import ArtistListRow from '@/components/ArtistListRow'
-import EmptyState from '@/components/EmptyState'
-import LetterSection from '@/components/LetterSection'
-import PageHeader from '@/components/PageHeader'
-import SearchInput from '@/components/SearchInput'
-import SearchEmptyState from '@/components/SearchEmptyState'
-import SortSelect from '@/components/SortSelect'
+import AlphabetIndex from '@/components/navigation/AlphabetIndex'
+import ArtistListRow from '@/components/data/ArtistListRow'
+import EmptyState from '@/components/feedback/EmptyState'
+import LetterSection from '@/components/navigation/LetterSection'
+import PageHeader from '@/components/layout/PageHeader'
+import SearchInput from '@/components/navigation/SearchInput'
+import SearchEmptyState from '@/components/feedback/SearchEmptyState'
+import SortSelect from '@/components/navigation/SortSelect'
 import { matchesSearch } from '@/utils/search'
 import { useSearch } from '@/hooks/useSearch'
 import { useApp } from '@/contexts/app'
@@ -26,7 +26,7 @@ const ARTIST_SORT_OPTIONS: SortOption<ArtistKey>[] = [
   { value: 'duration', label: 'Duration', natural: 'desc' },
 ]
 
-// Each comparator is the ascending side only — the direction lives in useSort
+// Each comparator is the ascending side only �?the direction lives in useSort
 const ARTIST_COMPARATORS: Record<ArtistKey, (a: Artist, b: Artist) => number> = {
   name: (a, b) => compareNames(a.name, b.name),
   tracks: (a, b) => a.trackCount - b.trackCount,
@@ -70,7 +70,7 @@ export default function ArtistsPage() {
         {artists.length === 0 ? (
           <EmptyState
             title="No artists in your library yet."
-            hint="Click “Add Music” to import your library"
+            hint="Click “Add Music�?to import your library"
           />
         ) : (
           <>
@@ -117,3 +117,4 @@ export default function ArtistsPage() {
     </>
   )
 }
+

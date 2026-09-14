@@ -5,8 +5,8 @@ import { useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { albumPath, artistPath, composerPath } from '@/utils/routes'
 import { Music, Disc3, UserRound, PenLine, Calendar, Clock, FileAudio } from 'lucide-react'
-import BackLink from '@/components/BackLink'
-import NotFoundState from '@/components/NotFoundState'
+import BackLink from '@/components/navigation/BackLink'
+import NotFoundState from '@/components/feedback/NotFoundState'
 import { useApp } from '@/contexts/app'
 import * as React from "react";
 
@@ -109,7 +109,7 @@ export default function TrackDetailPage() {
                   </Link>
                 ))}
               </span>
-            ) : '—'}
+            ) : 'Unknown'}
           />
           <InfoItem
             icon={Disc3}
@@ -126,7 +126,7 @@ export default function TrackDetailPage() {
                   </Link>
                 ))}
               </span>
-            ) : '—'}
+            ) : 'Unknown'}
           />
           <InfoItem
             icon={Disc3}
@@ -148,17 +148,17 @@ export default function TrackDetailPage() {
           <InfoItem
             icon={Calendar}
             label="Release Date"
-            value={track.releaseDate ?? '—'}
+            value={track.releaseDate ?? 'Unknown'}
           />
           <InfoItem
             icon={Music}
             label="Track Number"
-            value={track.trackNumber != null ? String(track.trackNumber) : '—'}
+            value={track.trackNumber != null ? String(track.trackNumber) : 'Unknown'}
           />
           <InfoItem
             icon={Disc3}
             label="Disc Number"
-            value={track.discNumber != null ? String(track.discNumber) : '—'}
+            value={track.discNumber != null ? String(track.discNumber) : 'Unknown'}
           />
         </div>
       </section>
@@ -170,27 +170,27 @@ export default function TrackDetailPage() {
           <InfoItem
             icon={FileAudio}
             label="Codec"
-            value={track.codec ?? '—'}
+            value={track.codec ?? 'Unknown'}
           />
           <InfoItem
             icon={Music}
             label="Bit Depth"
-            value={track.bitDepth != null ? `${track.bitDepth}-bit` : '—'}
+            value={track.bitDepth != null ? `${track.bitDepth}-bit` : 'Unknown'}
           />
           <InfoItem
             icon={Music}
             label="Sample Rate"
-            value={track.sampleRate != null ? formatSampleRate(track.sampleRate) : '—'}
+            value={track.sampleRate != null ? formatSampleRate(track.sampleRate) : 'Unknown'}
           />
           <InfoItem
             icon={Music}
             label="Bitrate"
-            value={track.bitrate != null ? formatBitrate(track.bitrate) : '—'}
+            value={track.bitrate != null ? formatBitrate(track.bitrate) : 'Unknown'}
           />
           <InfoItem
             icon={Music}
             label="Lossless"
-            value={track.lossless != null ? (track.lossless ? 'Yes' : 'No') : '—'}
+            value={track.lossless != null ? (track.lossless ? 'Yes' : 'No') : 'Unknown'}
           />
         </div>
       </section>
@@ -253,18 +253,18 @@ export default function TrackDetailPage() {
               <MetadataRow label="Title" value={track.title} />
               <MetadataRow label="Artist" value={track.artist} />
               <MetadataRow label="Album" value={track.album} />
-              <MetadataRow label="Album Artist" value={track.albumArtist || '—'} />
-              <MetadataRow label="Composer" value={track.composer ?? '—'} />
-              <MetadataRow label="Track Number" value={track.trackNumber != null ? String(track.trackNumber) : '—'} />
-              <MetadataRow label="Disc Number" value={track.discNumber != null ? String(track.discNumber) : '—'} />
+              <MetadataRow label="Album Artist" value={track.albumArtist || 'Unknown'} />
+              <MetadataRow label="Composer" value={track.composer ?? 'Unknown'} />
+              <MetadataRow label="Track Number" value={track.trackNumber != null ? String(track.trackNumber) : 'Unknown'} />
+              <MetadataRow label="Disc Number" value={track.discNumber != null ? String(track.discNumber) : 'Unknown'} />
               <MetadataRow label="Duration" value={formatTime(track.duration)} />
-              <MetadataRow label="Release Date" value={track.releaseDate ?? '—'} />
-              <MetadataRow label="Copyright" value={track.copyright ?? '—'} />
-              <MetadataRow label="Codec" value={track.codec ?? '—'} />
-              <MetadataRow label="Bit Depth" value={track.bitDepth != null ? `${track.bitDepth}-bit` : '—'} />
-              <MetadataRow label="Sample Rate" value={track.sampleRate != null ? formatSampleRate(track.sampleRate) : '—'} />
-              <MetadataRow label="Bitrate" value={track.bitrate != null ? formatBitrate(track.bitrate) : '—'} />
-              <MetadataRow label="Lossless" value={track.lossless != null ? (track.lossless ? 'Yes' : 'No') : '—'} />
+              <MetadataRow label="Release Date" value={track.releaseDate ?? 'Unknown'} />
+              <MetadataRow label="Copyright" value={track.copyright ?? 'Unknown'} />
+              <MetadataRow label="Codec" value={track.codec ?? 'Unknown'} />
+              <MetadataRow label="Bit Depth" value={track.bitDepth != null ? `${track.bitDepth}-bit` : 'Unknown'} />
+              <MetadataRow label="Sample Rate" value={track.sampleRate != null ? formatSampleRate(track.sampleRate) : 'Unknown'} />
+              <MetadataRow label="Bitrate" value={track.bitrate != null ? formatBitrate(track.bitrate) : 'Unknown'} />
+              <MetadataRow label="Lossless" value={track.lossless != null ? (track.lossless ? 'Yes' : 'No') : 'Unknown'} />
               <MetadataRow label="File Path" value={track.filePath} />
             </tbody>
           </table>

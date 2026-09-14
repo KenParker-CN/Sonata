@@ -5,18 +5,18 @@ import { ListMusic, Plus, Trash2, Pencil } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { playlistArtId } from '@/services/customArt'
-import BackLink from '@/components/BackLink'
-import ArtPicker from '@/components/ArtPicker'
-import NotFoundState from '@/components/NotFoundState'
-import PlayButton from '@/components/PlayButton'
-import SearchInput from '@/components/SearchInput'
-import SearchEmptyState from '@/components/SearchEmptyState'
-import TrackList from '@/components/TrackList'
+import BackLink from '@/components/navigation/BackLink'
+import ArtPicker from '@/components/media/ArtPicker'
+import NotFoundState from '@/components/feedback/NotFoundState'
+import PlayButton from '@/components/media/PlayButton'
+import SearchInput from '@/components/navigation/SearchInput'
+import SearchEmptyState from '@/components/feedback/SearchEmptyState'
+import TrackList from '@/components/data/TrackList'
 import {
   AddTracksDialog,
   DeletePlaylistDialog,
   PlaylistDetailsDialog,
-} from '@/components/PlaylistDialogs'
+} from '@/components/dialogs/PlaylistDialogs'
 import { matchesSearch } from '@/utils/search'
 import { useSearch } from '@/hooks/useSearch'
 import { useApp } from '@/contexts/app'
@@ -153,7 +153,7 @@ export default function PlaylistDetailPage() {
             <button
               type="button"
               onClick={() => setDialog('add')}
-              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="btn btn-outline btn-sm rounded-full"
             >
               <Plus size={15} />
               Add Music
@@ -163,7 +163,7 @@ export default function PlaylistDetailPage() {
                 type="button"
                 onClick={() => setDialog('edit')}
                 aria-label="Edit playlist details"
-                className="rounded-full p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="btn btn-ghost btn-circle"
               >
                 <Pencil size={16} />
               </button>
@@ -171,7 +171,7 @@ export default function PlaylistDetailPage() {
                 type="button"
                 onClick={() => setDialog('delete')}
                 aria-label="Delete playlist"
-                className="rounded-full p-2 text-muted-foreground transition hover:bg-accent hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="btn btn-ghost btn-circle text-muted-foreground hover:bg-accent hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Trash2 size={16} />
               </button>
@@ -185,7 +185,7 @@ export default function PlaylistDetailPage() {
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <ListMusic size={36} className="mb-3 opacity-30" />
           <p className="text-sm font-medium">This playlist is empty.</p>
-          <p className="text-xs mt-1">Use “Add Music” above, or “Add to Playlist” from any track menu.</p>
+          <p className="text-xs mt-1">Use “Add Music�?above, or “Add to Playlist�?from any track menu.</p>
         </div>
       ) : (
         <>

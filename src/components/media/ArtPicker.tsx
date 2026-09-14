@@ -1,7 +1,7 @@
 import type { ArtId } from '@/services/customArt'
 import { useRef, useState } from 'react'
 import { ImageOff, ImageUp } from 'lucide-react'
-import CoverArt from '@/components/CoverArt'
+import CoverArt from '@/components/media/CoverArt'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/contexts/app'
 
@@ -18,7 +18,7 @@ interface ArtPickerProps {
 
 /**
  * Large artwork in a detail-page header, optionally editable. An entity that
- * carries no artwork of its own — artists, composers, playlists — falls back to
+ * carries no artwork of its own �?artists, composers, playlists �?falls back to
  * a 2x2 mosaic of its tracks' covers and then to a painted monogram, so the box
  * is never empty.
  *
@@ -79,7 +79,7 @@ export default function ArtPicker({ name, covers = [], upload, className }: ArtP
           'text-center text-[11px] font-medium text-white transition-opacity',
           error
             ? 'opacity-100'
-            : 'opacity-0 focus-within:opacity-100 group-hover/art:opacity-100 touch:opacity-100',
+            : 'opacity-0 group-hover/art:opacity-100 touch:opacity-100',
         )}
       >
         {error && <p className="leading-snug">{error}</p>}
@@ -114,3 +114,4 @@ export default function ArtPicker({ name, covers = [], upload, className }: ArtP
     </div>
   )
 }
+

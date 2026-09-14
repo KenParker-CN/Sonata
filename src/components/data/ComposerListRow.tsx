@@ -5,8 +5,8 @@ import {
   ContextMenu,
   ContextMenuTrigger,
 } from '@/components/ui/ContextMenu'
-import EntityMenuContent from '@/components/EntityContextMenu'
-import GeneratedArt from '@/components/GeneratedArt'
+import EntityMenuContent from '@/components/context-menus/EntityContextMenu'
+import GeneratedArt from '@/components/media/GeneratedArt'
 import { composerArtId } from '@/services/customArt'
 import { useApp } from '@/contexts/app'
 
@@ -14,7 +14,7 @@ interface ComposerListRowProps {
   composer: Composer
 }
 
-/** List-view twin of ComposerCard â€” the directory row the A-Z sections fill. */
+/** List-view twin of ComposerCard â€?the directory row the A-Z sections fill. */
 export default function ComposerListRow({ composer }: ComposerListRowProps) {
   const {
     playlists,
@@ -59,3 +59,4 @@ export default function ComposerListRow({ composer }: ComposerListRowProps) {
     </ContextMenu>
   )
 }
+

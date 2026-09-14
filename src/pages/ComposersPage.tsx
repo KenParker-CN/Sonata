@@ -5,14 +5,14 @@ import { compareNames } from '@/utils/collate'
 import { groupComposers } from '@/utils/groupComposers'
 import { useMemo } from 'react'
 import { groupByInitial, sectionLetters } from '@/utils/alphabet'
-import AlphabetIndex from '@/components/AlphabetIndex'
-import ComposerListRow from '@/components/ComposerListRow'
-import EmptyState from '@/components/EmptyState'
-import LetterSection from '@/components/LetterSection'
-import PageHeader from '@/components/PageHeader'
-import SearchInput from '@/components/SearchInput'
-import SearchEmptyState from '@/components/SearchEmptyState'
-import SortSelect from '@/components/SortSelect'
+import AlphabetIndex from '@/components/navigation/AlphabetIndex'
+import ComposerListRow from '@/components/data/ComposerListRow'
+import EmptyState from '@/components/feedback/EmptyState'
+import LetterSection from '@/components/navigation/LetterSection'
+import PageHeader from '@/components/layout/PageHeader'
+import SearchInput from '@/components/navigation/SearchInput'
+import SearchEmptyState from '@/components/feedback/SearchEmptyState'
+import SortSelect from '@/components/navigation/SortSelect'
 import { matchesSearch } from '@/utils/search'
 import { useSearch } from '@/hooks/useSearch'
 import { useApp } from '@/contexts/app'
@@ -70,7 +70,7 @@ export default function ComposersPage() {
         {tracks.length === 0 ? (
           <EmptyState
             title="No composers in your library yet."
-            hint="Click “Add Music” to import your library"
+            hint="Click “Add Music�?to import your library"
           />
         ) : composers.length === 0 ? (
           <EmptyState
@@ -123,3 +123,4 @@ export default function ComposersPage() {
     </>
   )
 }
+

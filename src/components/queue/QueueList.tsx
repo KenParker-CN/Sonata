@@ -4,13 +4,13 @@ import type { Playlist, QueueItem, Track } from '@/types/music'
 import { parseArtists } from '@/utils/parseArtists'
 import { cn } from '@/lib/utils'
 import { MoreHorizontal, Play, ListMusic, X, ChevronDown } from 'lucide-react'
-import { TrackDropdownContent } from '@/components/TrackContextMenu'
+import { TrackDropdownContent } from '@/components/context-menus/TrackContextMenu'
 
 /**
- * QueueList — 队列列表的纯展示层。
+ * QueueList �?队列列表的纯展示层�?
  *
- * 不关心自己是嵌在右侧固定面板里，还是从底部弹起。
- * 这一层只负责：把 queue 数据渲染成可交互的行。
+ * 不关心自己是嵌在右侧固定面板里，还是从底部弹起�?
+ * 这一层只负责：把 queue 数据渲染成可交互的行�?
  */
 
 interface QueueListProps {
@@ -275,3 +275,4 @@ export default function QueueList({
     </div>
   )
 }
+

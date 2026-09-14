@@ -29,7 +29,7 @@ export default function SortSelect<K extends string>({
         <select
           value={sort.key}
           onChange={event => sort.setKey(event.target.value as K)}
-          className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
+          className="select select-sm rounded-md border border-border bg-card text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring"
         >
           {sort.options.map(option => (
             <option key={option.value} value={option.value}>
@@ -43,7 +43,7 @@ export default function SortSelect<K extends string>({
         onClick={sort.toggleDirection}
         aria-label={`Sort direction: ${ascending ? 'ascending' : 'descending'}. Activate to reverse.`}
         title={ascending ? 'Ascending' : 'Descending'}
-        className="rounded-md border border-border bg-card p-1.5 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="btn btn-ghost btn-sm rounded-md border border-border bg-card text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {ascending ? <ArrowUpNarrowWide size={14} /> : <ArrowDownWideNarrow size={14} />}
       </button>

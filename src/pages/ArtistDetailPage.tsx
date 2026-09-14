@@ -5,12 +5,12 @@ import { compareNames } from '@/utils/collate'
 import { Users } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { useMemo } from 'react'
-import AlbumCard from '@/components/AlbumCard'
-import ArtPicker from '@/components/ArtPicker'
-import BackLink from '@/components/BackLink'
-import NotFoundState from '@/components/NotFoundState'
-import Shelf from '@/components/Shelf'
-import TrackLockup from '@/components/TrackLockup'
+import AlbumCard from '@/components/data/AlbumCard'
+import ArtPicker from '@/components/media/ArtPicker'
+import BackLink from '@/components/navigation/BackLink'
+import NotFoundState from '@/components/feedback/NotFoundState'
+import Shelf from '@/components/data/Shelf'
+import TrackLockup from '@/components/data/TrackLockup'
 import { artistArtId } from '@/services/customArt'
 import { useApp } from '@/contexts/app'
 
@@ -79,7 +79,7 @@ export default function ArtistDetailPage() {
 
       {/* Profile Section */}
       <div className="flex flex-col sm:flex-row gap-6 mb-8">
-        {/* Artist artwork â€” painted from the name until a custom image exists */}
+        {/* Artist artwork â€?painted from the name until a custom image exists */}
         <ArtPicker
           name={decodedArtistName}
           upload={{ artId: artistArtId(decodedArtistName), noun: 'artist image' }}
@@ -176,3 +176,4 @@ export default function ArtistDetailPage() {
     </div>
   )
 }
+

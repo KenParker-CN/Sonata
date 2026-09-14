@@ -13,11 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/Dialog'
 
-const CANCEL = 'px-4 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors'
-const PRIMARY = 'px-4 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity'
-const DESTRUCTIVE = 'px-4 py-2 rounded-md text-sm bg-destructive text-destructive-foreground font-medium hover:opacity-90 transition-opacity'
-
-const inputClass = 'w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+const inputClass = 'w-full input input-sm sm:input-md'
 
 interface PlaylistDetailsDialogProps {
   open: boolean
@@ -114,10 +110,10 @@ function PlaylistDetailsForm({
         />
       </div>
       <DialogFooter>
-        <button type="button" onClick={onCancel} className={CANCEL}>
+        <button type="button" onClick={onCancel} className="btn btn-ghost">
           Cancel
         </button>
-        <button type="submit" disabled={!trimmed} className={PRIMARY}>
+        <button type="submit" disabled={!trimmed} className="btn btn-primary">
           {mode === 'create' ? 'Create' : 'Save'}
         </button>
       </DialogFooter>
@@ -148,7 +144,7 @@ export function DeletePlaylistDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <button type="button" onClick={() => onOpenChange(false)} className={CANCEL}>
+          <button type="button" onClick={() => onOpenChange(false)} className="btn btn-ghost">
             Cancel
           </button>
           <button
@@ -157,7 +153,7 @@ export function DeletePlaylistDialog({
               onConfirm()
               onOpenChange(false)
             }}
-            className={DESTRUCTIVE}
+            className="btn btn-error"
           >
             Delete
           </button>
@@ -306,7 +302,7 @@ function AddTracksForm({
       </div>
 
       <DialogFooter>
-        <button type="button" onClick={onCancel} className={CANCEL}>
+        <button type="button" onClick={onCancel} className="btn btn-ghost">
           Cancel
         </button>
         <button
@@ -316,7 +312,7 @@ function AddTracksForm({
             onAdd(picked)
             onCancel()
           }}
-          className={PRIMARY}
+          className="btn btn-primary"
         >
           {picked.length > 0 ? `Add ${picked.length} ${picked.length === 1 ? 'track' : 'tracks'}` : 'Add tracks'}
         </button>

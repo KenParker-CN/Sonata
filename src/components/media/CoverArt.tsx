@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import GeneratedArt from '@/components/GeneratedArt'
+import GeneratedArt from '@/components/media/GeneratedArt'
 
 interface CoverArtProps {
   /** Seed for the generated tile when there is no artwork at all. */
@@ -17,7 +17,7 @@ interface CoverArtProps {
  * mosaic from 2 to 4 of them, and a painted monogram when it has none.
  *
  * Mosaic cells repeat the cover list rather than leaving gaps, and four tiles of
- * one identical cover are collapsed to a single full-bleed image â€” a plain cover
+ * one identical cover are collapsed to a single full-bleed image â€?a plain cover
  * cut by grid lines reads as a rendering glitch.
  */
 export default function CoverArt({ name, covers, custom = null, className }: CoverArtProps) {
@@ -59,3 +59,4 @@ export default function CoverArt({ name, covers, custom = null, className }: Cov
     </div>
   )
 }
+

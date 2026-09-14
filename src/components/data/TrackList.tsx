@@ -1,5 +1,5 @@
 import type { Playlist, Track } from '@/types/music'
-import type { TrackMenuLinks } from '@/components/TrackContextMenu'
+import type { TrackMenuLinks } from '@/components/context-menus/TrackContextMenu'
 import { formatTime } from '@/utils/formatTime'
 import { parseArtists } from '@/utils/parseArtists'
 import { Link } from 'react-router-dom'
@@ -10,8 +10,8 @@ import {
   ContextMenu,
   ContextMenuTrigger,
 } from '@/components/ui/ContextMenu'
-import ArtistLinks from '@/components/ArtistLinks'
-import TrackMenuContent from '@/components/TrackContextMenu'
+import ArtistLinks from '@/components/data/ArtistLinks'
+import TrackMenuContent from '@/components/context-menus/TrackContextMenu'
 
 interface TrackListProps {
   tracks: Track[]
@@ -24,7 +24,7 @@ interface TrackListProps {
   links?: TrackMenuLinks
   onRemoveFromLibrary?: (trackId: string) => void
   onRemoveFromPlaylist?: (trackId: string) => void
-  /** Only where the order belongs to the user â€” playlists, not the library. */
+  /** Only where the order belongs to the user â€?playlists, not the library. */
   onMoveTrack?: (trackId: string, direction: 'up' | 'down') => void
 }
 
@@ -155,3 +155,4 @@ export default function TrackList({
     </div>
   )
 }
+

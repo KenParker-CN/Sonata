@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import Sidebar from '@/components/Sidebar'
-import QueueSidePanel from '@/components/QueueSidePanel'
+import Sidebar from '@/components/layout/Sidebar'
+import QueueSidePanel from '@/components/layout/QueueSidePanel'
 import type { Playlist, QueueItem, Track } from '@/types/music'
 
 /**

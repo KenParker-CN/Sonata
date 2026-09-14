@@ -16,7 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import AudioQualityBadge from '@/components/AudioQualityBadge'
+import AudioQualityBadge from '@/components/media/AudioQualityBadge'
 import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
 import { artistPath, trackPath } from '@/utils/routes'
 import * as React from "react";
@@ -70,7 +70,7 @@ export default function PlayerBar({
 }: PlayerBarProps) {
   return (
     <div className="h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
-      {/* Left: track info â€” fixed width block; the cover is anchored to its left edge regardless of title length */}
+      {/* Left: track info â€?fixed width block; the cover is anchored to its left edge regardless of title length */}
       <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
         <AnimatePresence initial={false} mode="wait">
           <motion.div
@@ -225,3 +225,4 @@ export default function PlayerBar({
     </div>
   )
 }
+

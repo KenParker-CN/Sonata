@@ -5,8 +5,8 @@ import {
   ContextMenu,
   ContextMenuTrigger,
 } from '@/components/ui/ContextMenu'
-import EntityMenuContent from '@/components/EntityContextMenu'
-import GeneratedArt from '@/components/GeneratedArt'
+import EntityMenuContent from '@/components/context-menus/EntityContextMenu'
+import GeneratedArt from '@/components/media/GeneratedArt'
 import { artistArtId } from '@/services/customArt'
 import { useApp } from '@/contexts/app'
 
@@ -54,3 +54,4 @@ export default function ArtistListRow({ artist }: ArtistListRowProps) {
     </ContextMenu>
   )
 }
+

@@ -22,7 +22,7 @@ import {
   ThemeToggler,
   type Resolved,
   type ThemeSelection,
-} from '@/components/animate-ui/primitives/effects/theme-toggler'
+} from '@/components/animate/theme-toggler'
 import {
   Drawer,
   DrawerClose,
@@ -30,7 +30,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/Drawer'
 import { useApp } from '@/contexts/app'
-import {GradientText} from "@/components/animate-ui/primitives/texts/gradient.tsx";
+import {GradientText} from "@/components/animate/gradient.tsx";
 
 const NAV_ITEMS: { path: string; label: string; icon: LucideIcon }[] = [
   { path: '/library', label: 'Library', icon: Library },
@@ -266,7 +266,7 @@ function SidebarContent({ dismissible = false }: { dismissible?: boolean }) {
 
 export default function Sidebar() {
   const { sidebarOpen, sidebarCollapsed, closeSidebar } = useApp()
-  // Below `lg` the full column never fits â€” it has to cover the page, which makes
+  // Below `lg` the full column never fits â€?it has to cover the page, which makes
   // it a dialog (Escape, focus trap, `aria-modal`, focus return) rather than a
   // restyled <aside>. The rail stays behind it as the permanent navigation.
   const isDrawer = useMediaQuery('(max-width: 1023px)')
@@ -300,3 +300,4 @@ export default function Sidebar() {
     </aside>
   )
 }
+

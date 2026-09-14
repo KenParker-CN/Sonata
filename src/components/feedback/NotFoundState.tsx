@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
-import BackLink from '@/components/BackLink'
-import EmptyState from '@/components/EmptyState'
+import BackLink from '@/components/navigation/BackLink'
+import EmptyState from '@/components/feedback/EmptyState'
 
 interface NotFoundStateProps {
   title: string
@@ -21,3 +21,4 @@ export default function NotFoundState({ title, icon, to, backLabel }: NotFoundSt
     </div>
   )
 }
+

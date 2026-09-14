@@ -24,13 +24,13 @@ import {
 import type {Playlist, QueueItem, Track} from '@/types/music'
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {Navigate, Route, Routes} from 'react-router-dom'
-import AppLayout from '@/components/AppLayout'
-import PlayerBar from '@/components/PlayerBar'
-import QueuePanel from '@/components/QueuePanel'
-import ImportProgressToast from '@/components/ImportProgressToast'
-import LibraryStatusBanner from '@/components/LibraryStatusBanner'
-import ConfirmDialog from '@/components/ConfirmDialog'
-import {PlaylistDetailsDialog} from '@/components/PlaylistDialogs'
+import AppLayout from '@/components/layout/AppLayout'
+import PlayerBar from '@/components/layout/PlayerBar'
+import QueuePanel from '@/components/layout/QueuePanel'
+import ImportProgressToast from '@/components/feedback/ImportProgressToast'
+import LibraryStatusBanner from '@/components/feedback/LibraryStatusBanner'
+import ConfirmDialog from '@/components/dialogs/ConfirmDialog'
+import {PlaylistDetailsDialog} from '@/components/dialogs/PlaylistDialogs'
 import {AppProvider, type AppContextValue} from '@/contexts/app'
 import {useMediaQuery} from '@/hooks/useMediaQuery'
 import LibraryPage from '@/pages/LibraryPage'
@@ -62,7 +62,7 @@ function matchingIds(tracks: Track[], matches: (track: Track) => boolean): strin
 
 // The play head tick re-renders App several times a second. With no props to
 // compare, memo stops that render from reaching the mounted page and its lists.
-// Pages still update when the app context changes value â€” memo does not block
+// Pages still update when the app context changes value â€?memo does not block
 // context propagation.
 interface PageRoutesProps {
     queueOpen: boolean
@@ -218,6 +218,7 @@ function App() {
     // Revoke object URLs on unmount to prevent memory leaks
     useEffect(() => {
         return () => {
+            // eslint-disable-next-line react-hooks/exhaustive-deps
             tracksRef.current.forEach(revokeTrackUrls)
         }
     }, [])
@@ -482,7 +483,7 @@ function App() {
     const requestResetLibrary = useCallback(() => setResetLibraryOpen(true), [])
 
     // A reload reads back what is cached, so clearing the cache also clears the
-    // running library â€” otherwise the two disagree until the next restart.
+    // running library â€?otherwise the two disagree until the next restart.
     const handleResetLibrary = useCallback(() => {
         void clearStoredLibrary()
             .then(() => {
@@ -635,13 +636,13 @@ function App() {
                         open={resetLibraryOpen}
                         onOpenChange={setResetLibraryOpen}
                         title="Clear cache"
-                        description={`Sonata will forget ${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'} and ${playlists.length} ${playlists.length === 1 ? 'playlist' : 'playlists'}. Your audio files stay on disk â€” pick the folder again to load them.`}
+                        description={`Sonata will forget ${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'} and ${playlists.length} ${playlists.length === 1 ? 'playlist' : 'playlists'}. Your audio files stay on disk â€?pick the folder again to load them.`}
                         confirmLabel="Clear"
                         onConfirm={handleResetLibrary}
                     />
                 </AppProvider>
 
-                {/* PlayerBar is outside the page switch â€” it persists across navigation */}
+                {/* PlayerBar is outside the page switch â€?it persists across navigation */}
                 <PlayerBar
                     track={currentTrack}
                     hasTrack={Boolean(currentTrack)}
@@ -686,3 +687,4 @@ function App() {
 }
 
 export default App
+

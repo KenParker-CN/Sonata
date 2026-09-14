@@ -1,5 +1,5 @@
 import { SearchX } from 'lucide-react'
-import EmptyState from '@/components/EmptyState'
+import EmptyState from '@/components/feedback/EmptyState'
 
 interface SearchEmptyStateProps {
   query: string
@@ -13,7 +13,7 @@ interface SearchEmptyStateProps {
 export default function SearchEmptyState({ query, onClear }: SearchEmptyStateProps) {
   return (
     <EmptyState
-      title={`Nothing matches “${query}”`}
+      title={`Nothing matches �?{query}”`}
       hint="Try fewer words, or a different spelling."
       icon={SearchX}
       action={
@@ -28,3 +28,4 @@ export default function SearchEmptyState({ query, onClear }: SearchEmptyStatePro
     />
   )
 }
+

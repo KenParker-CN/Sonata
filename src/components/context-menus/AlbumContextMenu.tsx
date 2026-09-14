@@ -3,7 +3,7 @@ import type { Playlist } from '@/types/music'
 import type { Album } from '@/utils/groupAlbums'
 import { albumPath } from '@/utils/routes'
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/ContextMenu'
-import EntityMenuContent from '@/components/EntityContextMenu'
+import EntityMenuContent from '@/components/context-menus/EntityContextMenu'
 
 interface AlbumContextMenuProps {
   album: Album
@@ -43,3 +43,4 @@ export default function AlbumContextMenu({
     </ContextMenu>
   )
 }
+

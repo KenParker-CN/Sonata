@@ -16,7 +16,7 @@ export default function PlayButton({ onClick, label, className }: PlayButtonProp
       onClick={onClick}
       aria-label={label}
       className={cn(
-        'inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'btn btn-primary rounded-full px-6',
         className,
       )}
     >

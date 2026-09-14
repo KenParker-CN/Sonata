@@ -1,14 +1,14 @@
-import TrackList from '@/components/TrackList'
+import TrackList from '@/components/data/TrackList'
 import { LibraryBig, Plus } from 'lucide-react'
 import type { SortOption } from '@/hooks/useSort'
 import type { Track } from '@/types/music'
 import { applySort, useSort } from '@/hooks/useSort'
 import { byDiscAndTrack, compareNames } from '@/utils/collate'
 import { useMemo } from 'react'
-import PageHeader from '@/components/PageHeader'
-import SearchInput from '@/components/SearchInput'
-import SearchEmptyState from '@/components/SearchEmptyState'
-import SortSelect from '@/components/SortSelect'
+import PageHeader from '@/components/layout/PageHeader'
+import SearchInput from '@/components/navigation/SearchInput'
+import SearchEmptyState from '@/components/feedback/SearchEmptyState'
+import SortSelect from '@/components/navigation/SortSelect'
 import { matchesSearch } from '@/utils/search'
 import { useSearch } from '@/hooks/useSearch'
 import { useApp } from '@/contexts/app'
@@ -97,7 +97,7 @@ export default function LibraryPage() {
               <Plus size={16} />
               Add Music
             </button>
-            <p className="mt-3 text-xs text-muted-foreground">Pick a folder of music from your device â€” it stays in your library after a reload</p>
+            <p className="mt-3 text-xs text-muted-foreground">Pick a folder of music from your device â€?it stays in your library after a reload</p>
           </div>
         ) : (
           <>
@@ -131,3 +131,4 @@ export default function LibraryPage() {
     </>
   )
 }
+

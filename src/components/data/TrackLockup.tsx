@@ -1,5 +1,5 @@
 import type { Playlist, Track } from '@/types/music'
-import type { TrackMenuLinks } from '@/components/TrackContextMenu'
+import type { TrackMenuLinks } from '@/components/context-menus/TrackContextMenu'
 import { Play, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
@@ -7,8 +7,8 @@ import {
   ContextMenu,
   ContextMenuTrigger,
 } from '@/components/ui/ContextMenu'
-import TrackMenuContent, { TrackDropdownContent } from '@/components/TrackContextMenu'
-import AudioQualityBadge from './AudioQualityBadge'
+import TrackMenuContent, { TrackDropdownContent } from '@/components/context-menus/TrackContextMenu'
+import AudioQualityBadge from '@/components/media/AudioQualityBadge'
 import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
 import { trackPath } from '@/utils/routes'
 
@@ -57,7 +57,7 @@ export default function TrackLockup({
               </div>
             )}
 
-            {/* Play button overlay â€” a hover cue only; a tap already plays the row */}
+            {/* Play button overlay â€?a hover cue only; a tap already plays the row */}
             <div className="play-button-overlay absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded touch:hidden">
               <Play size={20} className="text-white fill-white" />
             </div>
@@ -118,3 +118,4 @@ export default function TrackLockup({
     </ContextMenu>
   )
 }
+
