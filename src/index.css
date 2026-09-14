@@ -1,11 +1,44 @@
 @import "tailwindcss";
 
-/* HeroUI's component styles (layered: theme → base → components → utilities).
-   Must stay before this file's own @theme so the app palette wins the tie. */
-@import "@heroui/styles";
+@plugin "daisyui" {
+    themes: light --default, dark;
+}
 
-/* Custom HeroUI theme variables from global.css */
-@import "./global.css";
+@plugin "daisyui/theme" {
+    name: "light";
+    default: true;
+    prefersdark: false;
+    color-scheme: light;
+    --color-base-100: hsl(0 0% 100%);
+    --color-base-200: hsl(240 5% 96%);
+    --color-base-300: hsl(240 6% 90%);
+    --color-base-content: hsl(240 6% 10%);
+    --color-primary: hsl(262.1 83.3% 57.8%);
+    --color-primary-content: hsl(0 0% 100%);
+    --color-error: hsl(0 72% 51%);
+    --color-error-content: hsl(0 0% 100%);
+    --radius-box: 8px;
+    --radius-field: 6px;
+    --radius-selector: 4px;
+}
+
+@plugin "daisyui/theme" {
+    name: "dark";
+    default: false;
+    prefersdark: false;
+    color-scheme: dark;
+    --color-base-100: hsl(240 6% 10%);
+    --color-base-200: hsl(240 5% 14%);
+    --color-base-300: hsl(240 5% 20%);
+    --color-base-content: hsl(240 5% 95%);
+    --color-primary: hsl(240 5% 96%);
+    --color-primary-content: hsl(240 6% 10%);
+    --color-error: hsl(0 72% 51%);
+    --color-error-content: hsl(0 0% 100%);
+    --radius-box: 8px;
+    --radius-field: 6px;
+    --radius-selector: 4px;
+}
 
 /* View Transitions API — the theme-switch sweep must animate the WHOLE page
    (body background included), so the snapshot hangs off <html> itself. HeroUI's

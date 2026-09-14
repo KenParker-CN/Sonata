@@ -1,7 +1,6 @@
 import type { Playlist, Track } from '@/types/music'
 import type { TrackMenuLinks } from '@/components/TrackContextMenu'
 import { Play, MoreHorizontal } from 'lucide-react'
-import { Dropdown } from '@heroui/react'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import {
@@ -86,28 +85,24 @@ export default function TrackLockup({
             </div>
           </div>
 
-          {/* Context menu button — HeroUI Dropdown anchors the menu to the
-              button itself (a programmatically-opened Radix ContextMenu has
-              no pointer anchor and lands at the page corner). The wrapping
-              span swallows the click so the row does not also play. */}
-          <span onClick={e => e.stopPropagation()} className="shrink-0">
-            <Dropdown>
-              <Dropdown.Trigger
-                aria-label={`More actions for ${track.title}`}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-accent touch:opacity-100 touch-target"
-              >
-                <MoreHorizontal size={14} className="text-foreground" />
-              </Dropdown.Trigger>
-              <TrackDropdownContent
-                track={track}
-                playlists={playlists}
-                onPlayNext={onPlayNext}
-                onAddToQueue={onAddToQueue}
-                onAddToPlaylist={onAddToPlaylist}
-                links={links}
-                onRemoveFromLibrary={onRemoveFromLibrary}
-              />
-            </Dropdown>
+          <span onClick={e => e.stopPropagation()} className="dropdown dropdown-end shrink-0">
+            <button
+              type="button"
+              tabIndex={0}
+              aria-label={`More actions for ${track.title}`}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-accent touch:opacity-100 touch-target"
+            >
+              <MoreHorizontal size={14} className="text-foreground" />
+            </button>
+            <TrackDropdownContent
+              track={track}
+              playlists={playlists}
+              onPlayNext={onPlayNext}
+              onAddToQueue={onAddToQueue}
+              onAddToPlaylist={onAddToPlaylist}
+              links={links}
+              onRemoveFromLibrary={onRemoveFromLibrary}
+            />
           </span>
         </div>
       </ContextMenuTrigger>
