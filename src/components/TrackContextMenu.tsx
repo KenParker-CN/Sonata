@@ -2,8 +2,7 @@ import type { ReactNode } from 'react'
 import type { Playlist, Track } from '@/types/music'
 import { parseArtists } from '@/utils/parseArtists'
 import { trackComposers } from '@/utils/groupComposers'
-import { Link, useNavigate } from 'react-router-dom'
-import { Dropdown, Separator } from '@heroui/react'
+import { Link } from 'react-router-dom'
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -15,7 +14,6 @@ import {
 import { albumPath, artistPath, composerPath } from '@/utils/routes'
 import {
   CircleMinus,
-  ChevronRight,
   Disc3,
   ListEnd,
   ListPlus,
@@ -25,7 +23,6 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 /** Which detail links the navigation group offers. Destinations come from the track. */
 export interface TrackMenuLinks {
@@ -195,16 +192,6 @@ export default function TrackMenuContent({
   )
 }
 
-/* Dropdown (click-anchored) rendering of the same track menu, for buttons that
- * open it on tap — e.g. a row's "More options" control. Radix ContextMenu
- * positions from the pointer event, so opening it programmatically lands the
- * menu at the page corner; HeroUI's Dropdown anchors to the trigger instead.
- * Keep this tree in step with TrackMenuContent above. */
-
-// HeroUI's Popover renders unstyled — this is the menu surface the app uses.
-const DROPDOWN_SURFACE =
-  'rounded-lg border bg-popover p-1 text-popover-foreground shadow-md [data-entering]:animate-menu-in'
-
 function DropdownNavAction({
   to,
   onNavigate,
@@ -214,16 +201,10 @@ function DropdownNavAction({
   onNavigate?: () => void
   children: ReactNode
 }) {
-  const navigate = useNavigate()
   return (
-    <Dropdown.Item
-      onAction={() => {
-        onNavigate?.()
-        navigate(to)
-      }}
-    >
+    <Link to={to} onClick={onNavigate}>
       {children}
-    </Dropdown.Item>
+    </Link>
   )
 }
 
@@ -241,135 +222,46 @@ export function TrackDropdownContent({
 }: TrackMenuContentProps) {
   const artists = parseArtists(track.artist)
   const composers = trackComposers(track)
-
   const hasQueueGroup = Boolean(onAddToPlaylist || onPlayNext || onAddToQueue)
   const hasNavGroup = Boolean(
     links.album || (links.artist && artists.length > 0) || (links.composer && composers.length > 0),
   )
   const hasDangerGroup = Boolean(onRemoveFromQueue || onRemoveFromPlaylist || onRemoveFromLibrary)
-
-  // HeroUI's menu item lays out children with an internal gap; the trailing
-  // chevron is pushed to the far edge the same way Radix's SubTrigger does it.
-  const chevron = <ChevronRight size={14} className="ml-auto shrink-0" />
-  const divider = <Separator className="my-1 h-px bg-border" />
+  const divider = <li className="my-1 border-t border-border" aria-hidden="true" />
 
   return (
-    <Dropdown.Popover placement="bottom end" className={cn('min-w-56', DROPDOWN_SURFACE)}>
-      <Dropdown.Menu aria-label="Track actions">
-        {onAddToPlaylist && (
-          <Dropdown.SubmenuTrigger>
-            <Dropdown.Item>
-              <ListPlus className="h-4 w-4 shrink-0" />
-              Add to Playlist
-              {chevron}
-            </Dropdown.Item>
-            <Dropdown.Popover placement="right top" className={cn('min-w-40', DROPDOWN_SURFACE)}>
-              <Dropdown.Menu aria-label="Playlists">
-                {playlists.length === 0 ? (
-                  <Dropdown.Item isDisabled>No playlists yet</Dropdown.Item>
-                ) : (
-                  playlists.map(playlist => (
-                    <Dropdown.Item
-                      key={playlist.id}
-                      id={playlist.id}
-                      onAction={() => onAddToPlaylist(track.id, playlist.id)}
-                    >
-                      {playlist.name}
-                    </Dropdown.Item>
-                  ))
-                )}
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown.SubmenuTrigger>
-        )}
-        {onPlayNext && (
-          <Dropdown.Item onAction={() => onPlayNext(track.id)}>
-            <ListStart className="h-4 w-4 shrink-0" />
-            Play Next
-          </Dropdown.Item>
-        )}
-        {onAddToQueue && (
-          <Dropdown.Item onAction={() => onAddToQueue(track.id)}>
-            <ListEnd className="h-4 w-4 shrink-0" />
-            Add to Queue
-          </Dropdown.Item>
-        )}
-
-        {hasQueueGroup && hasNavGroup && divider}
-
-        {links.album && (
-          <DropdownNavAction
-            to={albumPath(track.album, track.albumArtist)}
-            onNavigate={onNavigate}
-          >
-            <Disc3 className="h-4 w-4 shrink-0" />
-            Go to Album
-          </DropdownNavAction>
-        )}
-        {links.artist && artists.length > 0 && (
-          <Dropdown.SubmenuTrigger>
-            <Dropdown.Item>
-              <UserRound className="h-4 w-4 shrink-0" />
-              Go to Artist
-              {chevron}
-            </Dropdown.Item>
-            <Dropdown.Popover placement="right top" className={cn('min-w-40', DROPDOWN_SURFACE)}>
-              <Dropdown.Menu aria-label="Artists">
-                {artists.map(artist => (
-                  <DropdownNavAction key={artist} to={artistPath(artist)} onNavigate={onNavigate}>
-                    {artist}
-                  </DropdownNavAction>
-                ))}
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown.SubmenuTrigger>
-        )}
-        {links.composer && composers.length === 1 && (
-          <DropdownNavAction to={composerPath(composers[0])} onNavigate={onNavigate}>
-            <PenLine className="h-4 w-4 shrink-0" />
-            Go to Composer
-          </DropdownNavAction>
-        )}
-        {links.composer && composers.length > 1 && (
-          <Dropdown.SubmenuTrigger>
-            <Dropdown.Item>
-              <PenLine className="h-4 w-4 shrink-0" />
-              Go to Composer
-              {chevron}
-            </Dropdown.Item>
-            <Dropdown.Popover placement="right top" className={cn('min-w-40', DROPDOWN_SURFACE)}>
-              <Dropdown.Menu aria-label="Composers">
-                {composers.map(composer => (
-                  <DropdownNavAction key={composer} to={composerPath(composer)} onNavigate={onNavigate}>
-                    {composer}
-                  </DropdownNavAction>
-                ))}
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown.SubmenuTrigger>
-        )}
-
-        {(hasQueueGroup || hasNavGroup) && hasDangerGroup && divider}
-
-        {onRemoveFromQueue && (
-          <Dropdown.Item variant="danger" onAction={onRemoveFromQueue}>
-            <X className="h-4 w-4 shrink-0" />
-            Remove from Queue
-          </Dropdown.Item>
-        )}
-        {onRemoveFromPlaylist && (
-          <Dropdown.Item variant="danger" onAction={() => onRemoveFromPlaylist(track.id)}>
-            <CircleMinus className="h-4 w-4 shrink-0" />
-            Remove from Playlist
-          </Dropdown.Item>
-        )}
-        {onRemoveFromLibrary && (
-          <Dropdown.Item variant="danger" onAction={() => onRemoveFromLibrary(track.id)}>
-            <Trash2 className="h-4 w-4 shrink-0" />
-            Remove from Library
-          </Dropdown.Item>
-        )}
-      </Dropdown.Menu>
-    </Dropdown.Popover>
+    <ul className="menu menu-sm dropdown-content z-50 w-56 rounded-box border border-border bg-popover p-1 text-popover-foreground shadow-md">
+      {onAddToPlaylist && (
+        <li>
+          <details>
+            <summary><ListPlus className="h-4 w-4 shrink-0" />Add to Playlist</summary>
+            <ul className="z-10 w-48 rounded-box border border-border bg-popover p-1 shadow-md">
+              {playlists.length === 0 ? <li className="px-3 py-2 text-muted-foreground">No playlists yet</li> : playlists.map(playlist => (
+                <li key={playlist.id}><button type="button" onClick={() => onAddToPlaylist(track.id, playlist.id)}>{playlist.name}</button></li>
+              ))}
+            </ul>
+          </details>
+        </li>
+      )}
+      {onPlayNext && <li><button type="button" onClick={() => onPlayNext(track.id)}><ListStart className="h-4 w-4 shrink-0" />Play Next</button></li>}
+      {onAddToQueue && <li><button type="button" onClick={() => onAddToQueue(track.id)}><ListEnd className="h-4 w-4 shrink-0" />Add to Queue</button></li>}
+      {hasQueueGroup && hasNavGroup && divider}
+      {links.album && <li><DropdownNavAction to={albumPath(track.album, track.albumArtist)} onNavigate={onNavigate}><Disc3 className="h-4 w-4 shrink-0" />Go to Album</DropdownNavAction></li>}
+      {links.artist && artists.length > 0 && (
+        <li><details><summary><UserRound className="h-4 w-4 shrink-0" />Go to Artist</summary><ul className="z-10 w-48 rounded-box border border-border bg-popover p-1 shadow-md">{artists.map(artist => (
+          <li key={artist}><DropdownNavAction to={artistPath(artist)} onNavigate={onNavigate}>{artist}</DropdownNavAction></li>
+        ))}</ul></details></li>
+      )}
+      {links.composer && composers.length === 1 && <li><DropdownNavAction to={composerPath(composers[0])} onNavigate={onNavigate}><PenLine className="h-4 w-4 shrink-0" />Go to Composer</DropdownNavAction></li>}
+      {links.composer && composers.length > 1 && (
+        <li><details><summary><PenLine className="h-4 w-4 shrink-0" />Go to Composer</summary><ul className="z-10 w-48 rounded-box border border-border bg-popover p-1 shadow-md">{composers.map(composer => (
+          <li key={composer}><DropdownNavAction to={composerPath(composer)} onNavigate={onNavigate}>{composer}</DropdownNavAction></li>
+        ))}</ul></details></li>
+      )}
+      {(hasQueueGroup || hasNavGroup) && hasDangerGroup && divider}
+      {onRemoveFromQueue && <li><button type="button" onClick={onRemoveFromQueue}><X className="h-4 w-4 shrink-0" />Remove from Queue</button></li>}
+      {onRemoveFromPlaylist && <li><button type="button" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => onRemoveFromPlaylist(track.id)}><CircleMinus className="h-4 w-4 shrink-0" />Remove from Playlist</button></li>}
+      {onRemoveFromLibrary && <li><button type="button" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => onRemoveFromLibrary(track.id)}><Trash2 className="h-4 w-4 shrink-0" />Remove from Library</button></li>}
+    </ul>
   )
 }

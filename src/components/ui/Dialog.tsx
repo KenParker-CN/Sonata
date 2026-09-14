@@ -1,19 +1,22 @@
 import * as React from 'react'
-import { Modal as HeroModal, cn } from '@heroui/react'
+import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
 
-/**
- * Dialog — migrated from Radix Dialog to HeroUI v3 Modal.
- *
- * HeroUI's compound-component structure is wrapped here so consumers keep the
- * old API: Dialog + DialogContent + DialogHeader/Footer/Title/Description.
- *
- * Internal tree:
- *   Dialog → Modal → Modal.Backdrop → Modal.Container → Modal.Dialog → content
- */
+interface DialogContextValue {
+  open: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+const DialogContext = React.createContext<DialogContextValue | null>(null)
+
+function useDialog() {
+  const context = React.useContext(DialogContext)
+  if (!context) throw new Error('Dialog components must be used inside Dialog')
+  return context
+}
 
 const Dialog = ({
-  open,
+  open = false,
   onOpenChange,
   children,
 }: {
@@ -21,39 +24,40 @@ const Dialog = ({
   onOpenChange?: (open: boolean) => void
   children?: React.ReactNode
 }) => (
-  <HeroModal isOpen={open} onOpenChange={onOpenChange}>
-    <HeroModal.Backdrop>
-      <HeroModal.Container>
-        <HeroModal.Dialog>
-          {children}
-        </HeroModal.Dialog>
-      </HeroModal.Container>
-    </HeroModal.Backdrop>
-  </HeroModal>
+  <DialogContext.Provider value={{ open, onOpenChange }}>
+    {children}
+  </DialogContext.Provider>
 )
 
-const DialogTrigger = HeroModal.Trigger
+const DialogTrigger = ({ children }: { children?: React.ReactNode }) => <>{children}</>
 
 const DialogClose = ({
   className,
   children,
+  onClick,
   ...props
-}: {
-  className?: string
-  children?: React.ReactNode
-}) => (
-  <HeroModal.CloseTrigger className={cn('absolute right-4 top-4', className)} {...props}>
-    {children ?? (
-      <>
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </>
-    )}
-  </HeroModal.CloseTrigger>
-)
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+  const { onOpenChange } = useDialog()
+  return (
+    <button
+      type="button"
+      className={cn('absolute right-4 top-4', className)}
+      onClick={event => {
+        onClick?.(event)
+        if (!event.defaultPrevented) onOpenChange?.(false)
+      }}
+      {...props}
+    >
+      {children ?? (
+        <>
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </>
+      )}
+    </button>
+  )
+}
 
-// Portal and Overlay are structural elements HeroUI handles internally;
-// re-exported as no-ops so existing imports keep resolving.
 const DialogPortal = ({ children }: { children: React.ReactNode }) => <>{children}</>
 const DialogOverlay = () => null
 
@@ -61,61 +65,62 @@ const DialogContent = ({
   className,
   children,
   ...props
-}: {
-  className?: string
-  children?: React.ReactNode
-}) => (
-  <HeroModal.Dialog className={cn('outline-none', className)} {...props}>
-    {children}
-    <DialogClose />
-  </HeroModal.Dialog>
-)
+}: React.HTMLAttributes<HTMLDivElement>) => {
+  const { open, onOpenChange } = useDialog()
+  const dialogRef = React.useRef<HTMLDialogElement>(null)
+
+  React.useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (open && !dialog.open) dialog.showModal()
+    if (!open && dialog.open) dialog.close()
+  }, [open])
+
+  if (!open) return null
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="modal bg-transparent p-4 backdrop:bg-black/45"
+      onCancel={event => {
+        event.preventDefault()
+        onOpenChange?.(false)
+      }}
+      onClick={event => {
+        if (event.target === event.currentTarget) onOpenChange?.(false)
+      }}
+    >
+      <div className={cn('modal-box relative w-full bg-popover text-popover-foreground shadow-xl', className)} {...props}>
+        {children}
+        <DialogClose />
+      </div>
+    </dialog>
+  )
+}
 DialogContent.displayName = 'DialogContent'
 
-const DialogHeader = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <HeroModal.Header
-    className={cn('flex flex-col space-y-1.5 text-center sm:text-left p-0', className)}
-    {...props}
-  />
+const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
 )
 DialogHeader.displayName = 'DialogHeader'
 
-const DialogFooter = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <HeroModal.Footer
-    className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-0', className)}
-    {...props}
-  />
+const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)} {...props} />
 )
 DialogFooter.displayName = 'DialogFooter'
 
-const DialogTitle = React.forwardRef<
-  HTMLHeadingElement,
-  React.ComponentProps<typeof HeroModal.Heading>
->(({ className, ...props }, ref) => (
-  <HeroModal.Heading
-    ref={ref}
-    className={cn('text-lg font-semibold leading-none tracking-tight', className)}
-    {...props}
-  />
-))
+const DialogTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h2 ref={ref} className={cn('text-lg font-semibold leading-none tracking-tight', className)} {...props} />
+  ),
+)
 DialogTitle.displayName = 'DialogTitle'
 
-const DialogDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn('text-sm text-muted-foreground', className)}
-    {...props}
-  />
-))
+const DialogDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <p ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
+  ),
+)
 DialogDescription.displayName = 'DialogDescription'
 
 export {

@@ -4,7 +4,6 @@ import type { Playlist, QueueItem, Track } from '@/types/music'
 import { parseArtists } from '@/utils/parseArtists'
 import { cn } from '@/lib/utils'
 import { MoreHorizontal, Play, ListMusic, X, ChevronDown } from 'lucide-react'
-import { Dropdown } from '@heroui/react'
 import { TrackDropdownContent } from '@/components/TrackContextMenu'
 
 /**
@@ -102,17 +101,16 @@ function QueueRow({
         </div>
       </button>
 
-      {/* More options button — HeroUI Dropdown anchors the menu to the
-          button; the shared TrackDropdownContent keeps the actions in step
-          with the right-click menu (only rendered for known tracks). */}
       {track && (
-        <Dropdown>
-          <Dropdown.Trigger
+        <div className="dropdown dropdown-end shrink-0">
+          <button
+            type="button"
+            tabIndex={0}
             aria-label="More options"
-            className="shrink-0 rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <MoreHorizontal size={14} />
-          </Dropdown.Trigger>
+          </button>
           <TrackDropdownContent
             track={track}
             playlists={playlists}
@@ -122,7 +120,7 @@ function QueueRow({
             links={{ album: true, artist: true, composer: false }}
             onRemoveFromQueue={() => onRemoveFromQueue?.(queueItemId)}
           />
-        </Dropdown>
+        </div>
       )}
     </div>
   )
