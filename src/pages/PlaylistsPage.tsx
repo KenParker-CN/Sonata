@@ -156,7 +156,7 @@ export default function PlaylistsPage() {
                           name={playlist.name}
                           covers={covers}
                           custom={artUrls[playlistArtId(playlist.id)]}
-                          className="aspect-square rounded-lg mb-3 transition-transform group-hover:scale-[1.02]"
+                          className="aspect-square w-full h-auto rounded-lg mb-3 transition-transform group-hover:scale-[1.02]"
                         />
 
                         {/* Playlist info */}

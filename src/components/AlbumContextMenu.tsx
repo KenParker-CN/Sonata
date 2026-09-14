@@ -1,7 +1,6 @@
 import type { ReactElement } from 'react'
 import type { Playlist } from '@/types/music'
 import type { Album } from '@/utils/groupAlbums'
-import { parseArtists } from '@/utils/parseArtists'
 import { albumPath } from '@/utils/routes'
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/ContextMenu'
 import EntityMenuContent from '@/components/EntityContextMenu'
@@ -35,7 +34,7 @@ export default function AlbumContextMenu({
         kind="album"
         playlists={playlists}
         openTo={albumPath(album.name, album.albumArtist)}
-        artists={parseArtists(album.albumArtist)}
+        artists={album.albumArtists}
         onPlay={onPlayAlbum && (() => onPlayAlbum(album.name, album.albumArtist))}
         onPlayNext={onPlayNext && (() => onPlayNext(album.name, album.albumArtist))}
         onAddToPlaylist={onAddToPlaylist && (playlistId => onAddToPlaylist(album.name, album.albumArtist, playlistId))}

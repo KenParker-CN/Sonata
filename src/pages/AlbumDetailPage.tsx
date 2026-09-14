@@ -189,6 +189,23 @@ export default function AlbumDetailPage() {
         () => tracks.filter(t => matchesAlbum(t, decodedAlbumName, decodedAlbumArtist)),
         [tracks, decodedAlbumName, decodedAlbumArtist],
     )
+    // The page's artist list is rebuilt from the tracks, not parsed out of the
+    // URL: the URL may carry either the raw tag ("A & B") or the normalized
+    // form ("A, B"), and the normalized form cannot be re-split because commas
+    // are deliberately not parseArtists separators.
+    const albumArtists = useMemo(() => {
+        const names: string[] = []
+        const seen = new Set<string>()
+        for (const t of albumTracks) {
+            for (const name of parseArtists(t.albumArtist ?? '')) {
+                if (!seen.has(name)) {
+                    seen.add(name)
+                    names.push(name)
+                }
+            }
+        }
+        return names.length > 0 ? names : [decodedAlbumArtist]
+    }, [albumTracks, decodedAlbumArtist])
     const {cover, totalDuration} = useMemo(() => ({
         // The album's cover is the first track that carries artwork.
         cover: albumTracks.find(t => t.cover)?.cover ?? null,
@@ -252,7 +269,7 @@ export default function AlbumDetailPage() {
                         <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{album.name}{albumBadge &&
                             <AudioQualityBadge badge={albumBadge}/>}</h1>
                         <ArtistLinks
-                            artists={parseArtists(album.albumArtist)}
+                            artists={albumArtists}
                             className="text-sm sm:text-base"
                         />
                     </div>

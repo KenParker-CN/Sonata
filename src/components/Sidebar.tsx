@@ -90,9 +90,10 @@ function ThemeToggle({ rail = false }: { rail?: boolean }) {
   }, [setTheme])
 
   return (
-    <ThemeToggler theme={theme} resolvedTheme={theme} setTheme={applyTheme} direction="ltr">
-      {({ resolved, toggleTheme }) => (
+    <ThemeToggler theme={theme} resolvedTheme={theme} setTheme={applyTheme} direction="circular">
+      {({ resolved, toggleTheme, buttonRef }) => (
         <button
+          ref={buttonRef}
           type="button"
           onClick={() => toggleTheme(resolved === 'dark' ? 'light' : 'dark')}
           aria-label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}

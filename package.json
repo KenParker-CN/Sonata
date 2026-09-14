@@ -11,10 +11,9 @@
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.20",
-    "@radix-ui/react-avatar": "^1.2.6",
+    "@heroui/react": "^3.2.5",
+    "@heroui/styles": "^3.2.5",
     "@radix-ui/react-context-menu": "^2.3.7",
-    "@radix-ui/react-dialog": "^1.1.23",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^1.41.0",
@@ -25,8 +24,7 @@
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
     "tailwind-merge": "^3.6.0",
-    "tailwindcss": "^4.3.3",
-    "vaul": "^1.1.2"
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

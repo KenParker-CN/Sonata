@@ -1,88 +1,117 @@
 import * as React from 'react'
-import { Drawer as DrawerPrimitive } from 'vaul'
-import { cn } from '@/lib/utils'
+import { Drawer as HeroDrawer, cn } from '@heroui/react'
 
-const Drawer = ({
-  shouldScaleBackground = true,
-  ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root
-    shouldScaleBackground={shouldScaleBackground}
-    {...props}
-  />
-)
-Drawer.displayName = 'Drawer'
-
-const DrawerTrigger = DrawerPrimitive.Trigger
-
-const DrawerPortal = DrawerPrimitive.Portal
-
-const DrawerClose = DrawerPrimitive.Close
-
-const DrawerOverlay = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay
-    ref={ref}
-    // Edges spelled out rather than `inset-0`: a caller that shortens the
-    // overlay must override one edge without dropping the other three.
-    className={cn('fixed top-0 right-0 bottom-0 left-0 z-50 bg-black/80', className)}
-    {...props}
-  />
-))
-DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
+/**
+ * Drawer — migrated from Vaul Drawer to HeroUI v3 Drawer.
+ *
+ * HeroUI's compound-component structure is wrapped here so consumers keep the
+ * old API: Drawer + DrawerContent + DrawerHeader/Footer/Title/Description.
+ *
+ * Prop mapping:
+ *   direction (old)  → placement (HeroUI Drawer.Content)
+ *   modal={false}    → isDismissable={false} (HeroUI Drawer.Backdrop)
+ *   overlayClassName → className on Drawer.Backdrop
+ *
+ * Internal tree:
+ *   Drawer (root) → [DrawerContent → Drawer.Backdrop → Drawer.Content → Drawer.Dialog → content]
+ */
 
 type DrawerDirection = 'top' | 'bottom' | 'left' | 'right'
 
-const DrawerContent = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {
-    direction?: DrawerDirection
-    /** Restyle the scrim this drawer renders — e.g. transparent for a non-modal panel. */
-    overlayClassName?: string
-  }
->(({ className, children, direction = 'bottom', overlayClassName, ...props }, ref) => {
-  const isSide = direction === 'left' || direction === 'right'
+// Drawer root — thin wrapper over HeroUI's root. Renders children as-is so
+// DrawerContent (which carries the backdrop + panel) slots in naturally.
+// Vaul-specific props (direction, modal, shouldScaleBackground) are explicitly
+// ignored — they belong on DrawerContent, not the root.
+const Drawer = ({
+  open,
+  onOpenChange,
+  children,
+  direction: _direction,
+  modal: _modal,
+  shouldScaleBackground: _shouldScaleBackground,
+  ...props
+}: {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  direction?: DrawerDirection
+  modal?: boolean
+  shouldScaleBackground?: boolean
+  children?: React.ReactNode
+}) => (
+  <HeroDrawer isOpen={open} onOpenChange={onOpenChange} {...props}>
+    {children}
+  </HeroDrawer>
+)
+Drawer.displayName = 'Drawer'
 
-  return (
-    <DrawerPortal>
-      <DrawerOverlay className={overlayClassName} />
-      <DrawerPrimitive.Content
-        ref={ref}
-        className={cn(
-          'fixed z-50 flex flex-col border bg-background',
-          // Height comes from the two edges, not `h-full`, so an override of
-          // `bottom` shortens the panel instead of fighting a fixed height.
-          isSide
-            ? cn(
-                'top-0 bottom-0 w-full max-w-[380px]',
-                direction === 'right'
-                  ? 'right-0 rounded-l-[10px]'
-                  : 'left-0 rounded-r-[10px]',
-              )
-            : 'inset-x-0 bottom-0 mt-24 h-auto rounded-t-[10px]',
-          className
-        )}
-        {...props}
-      >
-        {/* The drag-handle pill only reads as an affordance on a bottom sheet. */}
-        {!isSide && (
-          <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-        )}
+const DrawerTrigger = HeroDrawer.Trigger
+
+const DrawerClose = ({
+  className,
+  children,
+  ...props
+}: {
+  className?: string
+  children?: React.ReactNode
+  onClick?: (e: React.MouseEvent) => void
+  'aria-label'?: string
+}) => (
+  <HeroDrawer.CloseTrigger
+    className={cn(
+      'shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      className
+    )}
+    {...(props as React.ComponentProps<typeof HeroDrawer.CloseTrigger>)}
+  >
+    {children}
+  </HeroDrawer.CloseTrigger>
+)
+
+// Portal and Overlay are structural elements HeroUI handles internally;
+// re-exported as no-ops so existing imports keep resolving.
+const DrawerPortal = ({ children }: { children: React.ReactNode }) => <>{children}</>
+const DrawerOverlay = () => null
+
+interface DrawerContentProps {
+  className?: string
+  children?: React.ReactNode
+  direction?: DrawerDirection
+  /** Restyle the scrim this drawer renders — e.g. transparent for a non-modal panel. */
+  overlayClassName?: string
+  modal?: boolean
+}
+
+const DrawerContent = ({
+  className,
+  children,
+  direction = 'bottom',
+  overlayClassName,
+  modal = true,
+  ...props
+}: DrawerContentProps) => (
+  <HeroDrawer.Backdrop
+    isDismissable={modal}
+    className={overlayClassName}
+  >
+    <HeroDrawer.Content
+      placement={direction}
+      className={className}
+      {...props}
+    >
+      <HeroDrawer.Dialog>
         {children}
-      </DrawerPrimitive.Content>
-    </DrawerPortal>
-  )
-})
+      </HeroDrawer.Dialog>
+    </HeroDrawer.Content>
+  </HeroDrawer.Backdrop>
+)
 DrawerContent.displayName = 'DrawerContent'
 
 const DrawerHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn('grid gap-1.5 p-4 text-center sm:text-left', className)}
+  <HeroDrawer.Header
+    className={cn('flex flex-col gap-1.5 p-4 text-center sm:text-left', className)}
     {...props}
   />
 )
@@ -92,7 +121,7 @@ const DrawerFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
+  <HeroDrawer.Footer
     className={cn('mt-auto flex flex-col gap-2 p-4', className)}
     {...props}
   />
@@ -100,31 +129,28 @@ const DrawerFooter = ({
 DrawerFooter.displayName = 'DrawerFooter'
 
 const DrawerTitle = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
+  HTMLHeadingElement,
+  React.ComponentProps<typeof HeroDrawer.Heading>
 >(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Title
+  <HeroDrawer.Heading
     ref={ref}
-    className={cn(
-      'text-lg font-semibold leading-none tracking-tight',
-      className
-    )}
+    className={cn('text-lg font-semibold leading-none tracking-tight', className)}
     {...props}
   />
 ))
-DrawerTitle.displayName = DrawerPrimitive.Title.displayName
+DrawerTitle.displayName = 'DrawerTitle'
 
 const DrawerDescription = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description>
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Description
+  <p
     ref={ref}
     className={cn('text-sm text-muted-foreground', className)}
     {...props}
   />
 ))
-DrawerDescription.displayName = DrawerPrimitive.Description.displayName
+DrawerDescription.displayName = 'DrawerDescription'
 
 export {
   Drawer,

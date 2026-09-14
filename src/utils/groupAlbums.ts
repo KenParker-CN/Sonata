@@ -4,6 +4,13 @@ import { parseArtists } from '@/utils/parseArtists'
 export interface Album {
   name: string
   albumArtist: string
+  /**
+   * The individual artists behind `albumArtist`, already split by parseArtists.
+   * Kept alongside the string because normalizeAlbumArtist joins the names with
+   * ", " — a separator parseArtists deliberately does not split on — so the
+   * joined string alone cannot be re-split into correct artist links.
+   */
+  albumArtists: string[]
   cover: string | null
   trackIndices: number[]
 }
@@ -62,6 +69,7 @@ export function groupAlbums(tracks: Track[]): Album[] {
     // same album (especially classical / various-artists) may have different
     // track artists but share one albumArtist.
     const albumArtist = normalizeAlbumArtist(track.albumArtist)
+    const albumArtists = parseArtists(track.albumArtist ?? '')
     const key = albumKey(track)
 
     const existing = map.get(key)
@@ -74,6 +82,7 @@ export function groupAlbums(tracks: Track[]): Album[] {
       map.set(key, {
         name: albumName,
         albumArtist,
+        albumArtists: albumArtists.length > 0 ? albumArtists : [albumArtist],
         cover: track.cover,
         trackIndices: [i],
       })

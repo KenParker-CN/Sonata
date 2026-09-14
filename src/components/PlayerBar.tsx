@@ -58,7 +58,6 @@ export default function PlayerBar({
   volume,
   canPrev,
   canNext,
-  queueCount,
   playbackError,
   onTogglePlay,
   onPrev,
@@ -156,15 +155,9 @@ export default function PlayerBar({
         <button
           onClick={onOpenQueue}
           aria-label="Open queue"
-          title={`Queue (${queueCount} upcoming)`}
           className={cn(transportBtn, 'text-player-foreground relative')}
         >
           <ListMusic size={17} />
-          {queueCount > 0 && (
-            <span className="absolute -top-0.5 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-player-border px-1 text-[9px] leading-none text-player-muted tabular-nums">
-              {queueCount}
-            </span>
-          )}
         </button>
         <button
           onClick={onToggleShuffle}

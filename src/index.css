@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/* HeroUI's component styles (layered: theme → base → components → utilities).
+   Must stay before this file's own @theme so the app palette wins the tie. */
+@import "@heroui/styles";
+
+/* Custom HeroUI theme variables from global.css */
+@import "./global.css";
+
+/* View Transitions API — the theme-switch sweep must animate the WHOLE page
+   (body background included), so the snapshot hangs off <html> itself. HeroUI's
+   base styles disable it (`:root { view-transition-name: none }`) to keep its
+   overlays out of page transitions; this later, same-specificity rule restores
+   the default root snapshot. Must stay a `:root` selector — a lower-specificity
+   `html` would lose to HeroUI's rule, and naming the `#root` div instead only
+   snapshots the app shell while the body background flips instantly. */
+:root {
+  view-transition-name: root;
+}
+
 /* Tailwind's default `dark:` follows the OS, which has nothing to do with the
    theme the user picks in-app — `data-theme` on <html> is the source of truth. */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
@@ -8,19 +26,7 @@
    desktop only reveals on hover have no hover here, so they stay visible. */
 @custom-variant touch (@media (hover: none));
 
-@font-face {
-    font-family: "Google Sans";
-    src: url("/public/fonts/GoogleSans-Variable.ttf") format("truetype");
-    font-weight: 100 900;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Google Sans";
-    src: url("/public/fonts/GoogleSans-Italic-Variable.ttf") format("truetype");
-    font-weight: 100 900;
-    font-style: italic;
-}
+/* Default theme (Slate) - Light */
 @theme {
     --color-background: hsl(0 0% 100%);
     --color-foreground: hsl(240 6% 10%);
@@ -31,7 +37,7 @@
     --color-border: hsl(240 6% 90%);
     --color-accent: hsl(240 5% 94%);
     --color-accent-foreground: hsl(240 6% 12%);
-    --color-primary: hsl(240 6% 12%);
+    --color-primary: hsl(262.1 83.3% 57.8%);
     --color-primary-foreground: hsl(0 0% 100%);
     --color-sidebar: hsl(240 5% 97%);
     --color-sidebar-foreground: hsl(240 6% 10%);
@@ -43,7 +49,7 @@
     --color-ring: hsl(240 6% 30%);
     --color-popover: hsl(0 0% 100%);
     --color-popover-foreground: hsl(240 6% 10%);
-    --color-destructive: hsl(0 62% 45%);
+    --color-destructive: hsl(0 72% 51%);
     --color-destructive-foreground: hsl(0 0% 100%);
 
     --radius-lg: 8px;

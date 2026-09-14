@@ -1,14 +1,14 @@
 import type { Playlist, Track } from '@/types/music'
 import type { TrackMenuLinks } from '@/components/TrackContextMenu'
 import { Play, MoreHorizontal } from 'lucide-react'
+import { Dropdown } from '@heroui/react'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import {
   ContextMenu,
   ContextMenuTrigger,
 } from '@/components/ui/ContextMenu'
-import TrackMenuContent from '@/components/TrackContextMenu'
-import { useState } from 'react'
+import TrackMenuContent, { TrackDropdownContent } from '@/components/TrackContextMenu'
 import AudioQualityBadge from './AudioQualityBadge'
 import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
 import { trackPath } from '@/utils/routes'
@@ -38,11 +38,10 @@ export default function TrackLockup({
   onRemoveFromLibrary,
   showQualityBadge = true,
 }: TrackLockupProps) {
-  const [contextMenuOpen, setContextMenuOpen] = useState(false)
   const qualityBadge = showQualityBadge ? getAudioQualityBadge(track) : null
 
   return (
-    <ContextMenu open={contextMenuOpen} onOpenChange={setContextMenuOpen}>
+    <ContextMenu>
       <ContextMenuTrigger asChild>
         <div className="track-lockup group cursor-pointer flex items-center gap-2 p-1.5 rounded-md hover:bg-accent/50 transition-colors w-[300px]" onClick={onClick}>
           {/* Artwork wrapper */}
@@ -87,18 +86,29 @@ export default function TrackLockup({
             </div>
           </div>
 
-          {/* Context menu button */}
-          <button
-            type="button"
-            aria-label={`More actions for ${track.title}`}
-            className="context-menu-button opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-accent touch:opacity-100 touch-target"
-            onClick={(e) => {
-              e.stopPropagation()
-              setContextMenuOpen(true)
-            }}
-          >
-            <MoreHorizontal size={14} className="text-foreground" />
-          </button>
+          {/* Context menu button — HeroUI Dropdown anchors the menu to the
+              button itself (a programmatically-opened Radix ContextMenu has
+              no pointer anchor and lands at the page corner). The wrapping
+              span swallows the click so the row does not also play. */}
+          <span onClick={e => e.stopPropagation()} className="shrink-0">
+            <Dropdown>
+              <Dropdown.Trigger
+                aria-label={`More actions for ${track.title}`}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-accent touch:opacity-100 touch-target"
+              >
+                <MoreHorizontal size={14} className="text-foreground" />
+              </Dropdown.Trigger>
+              <TrackDropdownContent
+                track={track}
+                playlists={playlists}
+                onPlayNext={onPlayNext}
+                onAddToQueue={onAddToQueue}
+                onAddToPlaylist={onAddToPlaylist}
+                links={links}
+                onRemoveFromLibrary={onRemoveFromLibrary}
+              />
+            </Dropdown>
+          </span>
         </div>
       </ContextMenuTrigger>
       <TrackMenuContent

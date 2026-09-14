@@ -8,6 +8,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useMemo } from 'react'
 import AlbumContextMenu from '@/components/AlbumContextMenu'
 import ArtPicker from '@/components/ArtPicker'
+import ArtistLinks from '@/components/ArtistLinks'
 import BackLink from '@/components/BackLink'
 import GeneratedArt from '@/components/GeneratedArt'
 import NotFoundState from '@/components/NotFoundState'
@@ -150,10 +151,7 @@ export default function ComposerDetailPage() {
                 onAddToPlaylist={addAlbumToPlaylist}
                 onRemoveFromLibrary={removeAlbumFromLibrary}
               >
-                <Link
-                  to={albumPath(album.name, album.albumArtist)}
-                  className="group flex items-center gap-3 px-2 py-2 rounded-md transition-colors hover:bg-accent/50"
-                >
+                <div className="group relative flex items-center gap-3 px-2 py-2 rounded-md transition-colors hover:bg-accent/50">
                   <GeneratedArt
                     name={`${album.name} ${album.albumArtist}`}
                     src={album.cover}
@@ -163,7 +161,7 @@ export default function ComposerDetailPage() {
                   {/* Album info */}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{album.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{album.albumArtist}</p>
+                    <ArtistLinks artists={album.albumArtists} className="relative z-10" />
                   </div>
 
                   {/* Meta */}
@@ -173,7 +171,16 @@ export default function ComposerDetailPage() {
                   <span className="hidden sm:block shrink-0 w-16 text-right text-xs text-muted-foreground tabular-nums">
                     {formatTime(duration)}
                   </span>
-                </Link>
+
+                  {/* Stretched link — the row's own click target, layered behind
+                      the z-raised artist links so both stay clickable without
+                      nested <a>. */}
+                  <Link
+                    to={albumPath(album.name, album.albumArtist)}
+                    aria-label={album.name}
+                    className="absolute inset-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                  />
+                </div>
               </AlbumContextMenu>
             ))}
           </div>

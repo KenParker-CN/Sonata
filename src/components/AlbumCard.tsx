@@ -1,6 +1,5 @@
 import type { Album } from '@/utils/groupAlbums'
 import type { AudioQualityBadge as AudioQualityBadgeType } from '@/utils/getAudioQualityBadge'
-import { parseArtists } from '@/utils/parseArtists'
 import { albumPath } from '@/utils/routes'
 import { Link } from 'react-router-dom'
 import AlbumContextMenu from '@/components/AlbumContextMenu'
@@ -61,7 +60,7 @@ export default function AlbumCard({ album, badge = null, className }: AlbumCardP
             {album.name}
           </Link>
         </p>
-        <ArtistLinks artists={parseArtists(album.albumArtist)} />
+        <ArtistLinks artists={album.albumArtists} />
       </div>
     </AlbumContextMenu>
   )
