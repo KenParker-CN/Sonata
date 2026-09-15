@@ -18,7 +18,7 @@ interface ArtPickerProps {
 
 /**
  * Large artwork in a detail-page header, optionally editable. An entity that
- * carries no artwork of its own �?artists, composers, playlists �?falls back to
+ * carries no artwork of its own — artists, composers, playlists — falls back to
  * a 2x2 mosaic of its tracks' covers and then to a painted monogram, so the box
  * is never empty.
  *
@@ -114,4 +114,3 @@ export default function ArtPicker({ name, covers = [], upload, className }: ArtP
     </div>
   )
 }
-

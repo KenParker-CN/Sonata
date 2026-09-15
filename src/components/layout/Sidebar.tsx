@@ -266,7 +266,7 @@ function SidebarContent({ dismissible = false }: { dismissible?: boolean }) {
 
 export default function Sidebar() {
   const { sidebarOpen, sidebarCollapsed, closeSidebar } = useApp()
-  // Below `lg` the full column never fits â€?it has to cover the page, which makes
+  // Below `lg` the full column never fits  â€” it has to cover the page, which makes
   // it a dialog (Escape, focus trap, `aria-modal`, focus return) rather than a
   // restyled <aside>. The rail stays behind it as the permanent navigation.
   const isDrawer = useMediaQuery('(max-width: 1023px)')

@@ -97,7 +97,7 @@ export default function LibraryPage() {
               <Plus size={16} />
               Add Music
             </button>
-            <p className="mt-3 text-xs text-muted-foreground">Pick a folder of music from your device â€?it stays in your library after a reload</p>
+            <p className="mt-3 text-xs text-muted-foreground">Pick a folder of music from your device â€” it stays in your library after a reload</p>
           </div>
         ) : (
           <>
@@ -131,4 +131,3 @@ export default function LibraryPage() {
     </>
   )
 }
-

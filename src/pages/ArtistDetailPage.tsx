@@ -79,7 +79,7 @@ export default function ArtistDetailPage() {
 
       {/* Profile Section */}
       <div className="flex flex-col sm:flex-row gap-6 mb-8">
-        {/* Artist artwork â€?painted from the name until a custom image exists */}
+        {/* Artist artwork  â€” painted from the name until a custom image exists */}
         <ArtPicker
           name={decodedArtistName}
           upload={{ artId: artistArtId(decodedArtistName), noun: 'artist image' }}

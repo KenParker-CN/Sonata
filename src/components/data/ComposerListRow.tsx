@@ -14,7 +14,7 @@ interface ComposerListRowProps {
   composer: Composer
 }
 
-/** List-view twin of ComposerCard â€?the directory row the A-Z sections fill. */
+/** List-view twin of ComposerCard  â€” the directory row the A-Z sections fill. */
 export default function ComposerListRow({ composer }: ComposerListRowProps) {
   const {
     playlists,

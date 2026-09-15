@@ -185,7 +185,7 @@ export default function PlaylistDetailPage() {
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <ListMusic size={36} className="mb-3 opacity-30" />
           <p className="text-sm font-medium">This playlist is empty.</p>
-          <p className="text-xs mt-1">Use “Add Music�?above, or “Add to Playlist�?from any track menu.</p>
+          <p className="text-xs mt-1">Use “Add Music — above, or “Add to Playlist — from any track menu.</p>
         </div>
       ) : (
         <>

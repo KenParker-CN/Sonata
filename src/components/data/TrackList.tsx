@@ -24,7 +24,7 @@ interface TrackListProps {
   links?: TrackMenuLinks
   onRemoveFromLibrary?: (trackId: string) => void
   onRemoveFromPlaylist?: (trackId: string) => void
-  /** Only where the order belongs to the user â€?playlists, not the library. */
+  /** Only where the order belongs to the user  â€” playlists, not the library. */
   onMoveTrack?: (trackId: string, direction: 'up' | 'down') => void
 }
 

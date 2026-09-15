@@ -38,7 +38,7 @@ interface AlbumRow {
   year: number | null
   trackCount: number
   duration: number
-  /** Highest library index the album occupies �?imports append, so this is its arrival. */
+  /** Highest library index the album occupies — imports append, so this is its arrival. */
   addedAt: number
 }
 
@@ -184,4 +184,3 @@ export default function AlbumsPage() {
     </>
   )
 }
-

@@ -39,8 +39,8 @@ function workKey(discNumber: number, work: WorkItem): string {
     return `${discNumber}:${work.composer}:${work.work}`
 }
 
-// Flatten a disc into the rows it renders. Every row lands in one list �� rather
-// than one container per work �� so the hairline dividers between rows run
+// Flatten a disc into the rows it renders. Every row lands in one list  —  —  rather
+// than one container per work  —  —  so the hairline dividers between rows run
 // uninterrupted down the disc.
 function buildDiscRows(discGroup: DiscGroup, collapsedWorks: Set<string>): DiscRow[] {
     const rows: DiscRow[] = []
@@ -73,7 +73,7 @@ function extractDiscNumber(track: Track): number | null {
     return null
 }
 
-// Build sorted DiscGroups from a disc-number �� tracks mapping
+// Build sorted DiscGroups from a disc-number → tracks mapping
 function buildDiscGroups(discMap: Map<number, Track[]>): DiscGroup[] {
     return Array.from(discMap.entries())
         .sort(([a], [b]) => a - b)
@@ -120,7 +120,7 @@ function groupTracksByDisc(albumTracks: Track[]): DiscGroup[] {
     }
 
     // Strategy 3 (fallback): infer disc boundaries from trackNumber resets.
-    // This depends on albumTracks preserving the original FileList order ��
+    // This depends on albumTracks preserving the original FileList order  —  — 
     // if the library order places a later disc's tracks first, the disc
     // numbering will be wrong. No reliable correction is possible without
     // disc metadata or filename hints.
@@ -214,7 +214,7 @@ export default function AlbumDetailPage() {
     const discGroups = useMemo(() => groupTracksByDisc(albumTracks), [albumTracks])
     const albumBadge = useMemo(() => getAlbumQualityBadge(albumTracks), [albumTracks])
 
-    // All album track ids in presentation order (disc �� track). This is the
+    // All album track ids in presentation order (disc  —  —  track). This is the
     // playback context for this album: previous/next stay within the album.
     const albumTrackIds = useMemo(
         () => discGroups.flatMap(disc => disc.tracks.map(t => t.id)),
@@ -263,7 +263,7 @@ export default function AlbumDetailPage() {
                 {/* Cover */}
                 <ArtPicker covers={cover ? [cover] : []} name={`${album.name} ${album.albumArtist}`}/>
 
-                {/* Info �� compact stack centered against the cover */}
+                {/* Info  —  —  compact stack centered against the cover */}
                 <div className="flex flex-col justify-center gap-3 min-w-0 h-auto sm:h-64 text-center sm:text-left">
                     <div className="space-y-2">
                         <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{album.name}{albumBadge &&
@@ -293,7 +293,7 @@ export default function AlbumDetailPage() {
             <div>
                 {discGroups.map(discGroup => (
                     <div key={discGroup.discNumber}>
-                        {/* Disc header �� only meaningful when the album really spans discs */}
+                        {/* Disc header  —  —  only meaningful when the album really spans discs */}
                         {discGroups.length > 1 && (
                             <div className="flex items-center">
                                 <h2 className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground">Disc {discGroup.discNumber}</h2>
@@ -311,7 +311,7 @@ export default function AlbumDetailPage() {
                                         0
                                     )
 
-                                    // Work header �� clicking the row toggles its movements
+                                    // Work header  —  —  clicking the row toggles its movements
                                     return (
                                         <div
                                             key={`work-${itemIdx}`}
@@ -372,7 +372,7 @@ export default function AlbumDetailPage() {
                                     : track.trackNumber != null && track.trackNumber > 0
                                         ? String(track.trackNumber).padStart(2, '0')
                                         : ''
-                                // A standalone track keeps its full original title �� the parse was
+                                // A standalone track keeps its full original title  —  —  the parse was
                                 // only a candidate. Grouped tracks show their section instead.
                                 const label = row.kind === 'movement' ? row.entry.movement : track.title
 
@@ -440,4 +440,3 @@ export default function AlbumDetailPage() {
         </div>
     )
 }
-

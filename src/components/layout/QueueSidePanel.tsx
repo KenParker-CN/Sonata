@@ -2,10 +2,10 @@ import type { Playlist, QueueItem, Track } from '@/types/music'
 import QueueList from '@/components/queue/QueueList'
 
 /**
- * QueueSidePanel �?桌面端右侧固定的队列面板�?
+ * QueueSidePanel  — 桌面端右侧固定的队列面板 — 
  *
- * 作为布局的一部分，压缩主内容区域而不是覆盖它�?
- * 通过 CSS transition 平滑展开/收起�?
+ * 作为布局的一部分，压缩主内容区域而不是覆盖它 — 
+ * 通过 CSS transition 平滑展开/收起 — 
  */
 
 interface QueueSidePanelProps {

@@ -70,7 +70,7 @@ export default function PlayerBar({
 }: PlayerBarProps) {
   return (
     <div className="h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
-      {/* Left: track info â€?fixed width block; the cover is anchored to its left edge regardless of title length */}
+      {/* Left: track info  â€” fixed width block; the cover is anchored to its left edge regardless of title length */}
       <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
         <AnimatePresence initial={false} mode="wait">
           <motion.div

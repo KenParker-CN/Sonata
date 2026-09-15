@@ -70,7 +70,7 @@ export default function ComposersPage() {
         {tracks.length === 0 ? (
           <EmptyState
             title="No composers in your library yet."
-            hint="Click “Add Music�?to import your library"
+            hint="Click “Add Music — to import your library"
           />
         ) : composers.length === 0 ? (
           <EmptyState

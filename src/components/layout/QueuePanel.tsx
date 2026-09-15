@@ -10,10 +10,10 @@ import QueueList from '@/components/queue/QueueList'
 import { X, ListMusic } from 'lucide-react'
 
 /**
- * QueuePanel �?移动端底部弹出的队列面板�?
+ * QueuePanel  — 移动端底部弹出的队列面板 — 
  *
- * 桌面端使�?QueueSidePanel（右侧固定面板），移动端使用本组件（底部弹出）�?
- * 两者共�?QueueList 作为列表展示层�?
+ * 桌面端使 — QueueSidePanel（右侧固定面板），移动端使用本组件（底部弹出） — 
+ * 两者共 — QueueList 作为列表展示层 — 
  */
 
 interface QueuePanelProps {

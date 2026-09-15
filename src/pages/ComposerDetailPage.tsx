@@ -63,7 +63,7 @@ export default function ComposerDetailPage() {
     })),
   }), [albums, composerTracks])
 
-  // Tracks sorted by album order (album â†?disc â†?track number)
+  // Tracks sorted by album order (album  â€” disc  â€” track number)
   const orderedTracks = useMemo(() => {
     return [...composerTracks].sort((a, b) => {
       const albumCmp =
@@ -101,7 +101,7 @@ export default function ComposerDetailPage() {
     <div className="page-gutter pt-6 pb-8">
       <BackLink to="/composers" label="Back to composers" />
 
-      {/* Compact header â€?the name is the identity; the avatar is a portrait once uploaded */}
+      {/* Compact header  â€” the name is the identity; the avatar is a portrait once uploaded */}
       <div className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
           <div className="flex min-w-0 items-end gap-4">
@@ -136,7 +136,7 @@ export default function ComposerDetailPage() {
         <SearchEmptyState query={search.query} onClear={() => search.setQuery('')} />
       )}
 
-      {/* Works â€?compact rows, the main body of the page */}
+      {/* Works  â€” compact rows, the main body of the page */}
       {visibleWorks.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold tracking-tight mb-3">Works</h2>
@@ -172,7 +172,7 @@ export default function ComposerDetailPage() {
                     {formatTime(duration)}
                   </span>
 
-                  {/* Stretched link â€?the row's own click target, layered behind
+                  {/* Stretched link  â€” the row's own click target, layered behind
                       the z-raised artist links so both stay clickable without
                       nested <a>. */}
                   <Link
@@ -187,7 +187,7 @@ export default function ComposerDetailPage() {
         </section>
       )}
 
-      {/* Tracks â€?compact table list */}
+      {/* Tracks  â€” compact table list */}
       {visibleTracks.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold tracking-tight mb-3">Tracks</h2>

@@ -57,7 +57,7 @@ export default function TrackLockup({
               </div>
             )}
 
-            {/* Play button overlay â€?a hover cue only; a tap already plays the row */}
+            {/* Play button overlay  â€” a hover cue only; a tap already plays the row */}
             <div className="play-button-overlay absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded touch:hidden">
               <Play size={20} className="text-white fill-white" />
             </div>

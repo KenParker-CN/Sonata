@@ -43,7 +43,7 @@ export default function AlbumListRow({ album, meta }: AlbumListRowProps) {
 
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{meta}</span>
 
-        {/* Stretched link â€?the row's own click target, layered behind the
+        {/* Stretched link  â€” the row's own click target, layered behind the
             z-raised artist links so both stay clickable without nested <a>. */}
         <Link
           to={albumPath(album.name, album.albumArtist)}

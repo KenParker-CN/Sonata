@@ -20,7 +20,7 @@ interface AlbumCardProps {
 }
 
 /**
- * Album cover, title, artists and right-click menu â€?shared by the Albums page
+ * Album cover, title, artists and right-click menu  â€” shared by the Albums page
  * grid, its "Recently Added" shelf and the artist detail shelves. The actions
  * come from the app context, so a page never re-wires them per shelf.
  */
@@ -37,7 +37,7 @@ export default function AlbumCard({ album, badge = null, className }: AlbumCardP
       onRemoveFromLibrary={removeAlbumFromLibrary}
     >
       <div className={cn('group', className)}>
-        {/* Cover â€?1:1 aspect ratio with Apple-style rounding */}
+        {/* Cover  â€” 1:1 aspect ratio with Apple-style rounding */}
         <Link
           to={albumPath(album.name, album.albumArtist)}
           aria-label={album.name}

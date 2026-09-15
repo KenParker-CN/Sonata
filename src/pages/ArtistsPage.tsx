@@ -26,7 +26,7 @@ const ARTIST_SORT_OPTIONS: SortOption<ArtistKey>[] = [
   { value: 'duration', label: 'Duration', natural: 'desc' },
 ]
 
-// Each comparator is the ascending side only �?the direction lives in useSort
+// Each comparator is the ascending side only  — the direction lives in useSort
 const ARTIST_COMPARATORS: Record<ArtistKey, (a: Artist, b: Artist) => number> = {
   name: (a, b) => compareNames(a.name, b.name),
   tracks: (a, b) => a.trackCount - b.trackCount,
@@ -70,7 +70,7 @@ export default function ArtistsPage() {
         {artists.length === 0 ? (
           <EmptyState
             title="No artists in your library yet."
-            hint="Click “Add Music�?to import your library"
+            hint="Click “Add Music — to import your library"
           />
         ) : (
           <>
