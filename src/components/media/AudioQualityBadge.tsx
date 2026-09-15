@@ -7,19 +7,22 @@ interface AudioQualityBadgeProps {
   /** Force the dark-surface palette: the player bar is charcoal in both themes. */
   onDark?: boolean
 }
-export default function AudioQualityBadge({ badge, className}: AudioQualityBadgeProps) {
+export default function AudioQualityBadge({ badge, className, onDark }: AudioQualityBadgeProps) {
   if (!badge) return null
   return (
     <span
+      role="img"
+      aria-label={`Audio quality: ${badge.label}`}
+      title={badge.label}
       className={cn(
-        'relative inline-flex items-center px-1.5 py-0.5 text-xs font-medium leading-none tracking-wide whitespace-nowrap shrink-0',
-        className
+        'quality-block',
+        `quality-block-${badge.variant}`,
+        onDark && 'quality-block-on-dark',
+        className,
       )}
     >
-      <h4 className="">
-        {badge.label}
-      </h4>
+      <span className="quality-block-mark" aria-hidden="true" />
+      <span>{badge.label}</span>
     </span>
   )
 }
-
