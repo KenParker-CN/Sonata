@@ -62,7 +62,7 @@ function matchingIds(tracks: Track[], matches: (track: Track) => boolean): strin
 
 // The play head tick re-renders App several times a second. With no props to
 // compare, memo stops that render from reaching the mounted page and its lists.
-// Pages still update when the app context changes value â€?memo does not block
+// Pages still update when the app context changes value; memo does not block
 // context propagation.
 interface PageRoutesProps {
     queueOpen: boolean
@@ -483,7 +483,7 @@ function App() {
     const requestResetLibrary = useCallback(() => setResetLibraryOpen(true), [])
 
     // A reload reads back what is cached, so clearing the cache also clears the
-    // running library â€?otherwise the two disagree until the next restart.
+    // running library; otherwise the two disagree until the next restart.
     const handleResetLibrary = useCallback(() => {
         void clearStoredLibrary()
             .then(() => {
@@ -636,13 +636,13 @@ function App() {
                         open={resetLibraryOpen}
                         onOpenChange={setResetLibraryOpen}
                         title="Clear cache"
-                        description={`Sonata will forget ${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'} and ${playlists.length} ${playlists.length === 1 ? 'playlist' : 'playlists'}. Your audio files stay on disk â€?pick the folder again to load them.`}
+                        description={`Sonata will forget ${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'} and ${playlists.length} ${playlists.length === 1 ? 'playlist' : 'playlists'}. Your audio files stay on disk; pick the folder again to load them.`}
                         confirmLabel="Clear"
                         onConfirm={handleResetLibrary}
                     />
                 </AppProvider>
 
-                {/* PlayerBar is outside the page switch â€?it persists across navigation */}
+                {/* PlayerBar is outside the page switch; it persists across navigation */}
                 <PlayerBar
                     track={currentTrack}
                     hasTrack={Boolean(currentTrack)}
@@ -687,4 +687,3 @@ function App() {
 }
 
 export default App
-
