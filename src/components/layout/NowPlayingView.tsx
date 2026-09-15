@@ -348,7 +348,7 @@ export default function NowPlayingView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 24 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-0 z-40 flex min-h-0 flex-col overflow-y-auto bg-player text-player-foreground"
+      className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-player text-player-foreground"
       aria-label="Now Playing"
     >
       <div className="pointer-events-none absolute inset-0 opacity-30 blur-3xl" style={artworkStyle} aria-hidden="true" />
