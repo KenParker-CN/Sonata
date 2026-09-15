@@ -38,7 +38,7 @@ export default function QueueSidePanel({
   return (
     <div
       className={[
-        'shrink-0 border-l border-border bg-background flex flex-col overflow-hidden',
+        'shrink-0 border-l border-border bg-surface-soft flex flex-col overflow-hidden shadow-[-18px_0_40px_hsl(240_30%_4%_/_0.08)]',
         'transition-all duration-300 ease-in-out',
         open ? 'w-[320px] opacity-100' : 'w-0 opacity-0 border-l-0',
       ].join(' ')}

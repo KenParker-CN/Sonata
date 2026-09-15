@@ -58,6 +58,7 @@ export default function PlayerBar({
   volume,
   canPrev,
   canNext,
+  queueCount,
   playbackError,
   onTogglePlay,
   onPrev,
@@ -69,7 +70,7 @@ export default function PlayerBar({
   onOpenQueue,
 }: PlayerBarProps) {
   return (
-    <div className="h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
+    <div className="player-dock h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
       {/* Left: track info  — fixed width block; the cover is anchored to its left edge regardless of title length */}
       <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
         <AnimatePresence initial={false} mode="wait">
@@ -79,12 +80,12 @@ export default function PlayerBar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="flex w-full items-center gap-3"
+            className="flex w-full items-center gap-3.5"
           >
             {track?.cover ? (
-              <img src={track.cover} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
+              <img src={track.cover} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover shadow-lg" />
             ) : (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-player-border text-player-muted">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-player-border text-player-muted shadow-lg">
                 <Play size={14} />
               </div>
             )}
@@ -157,7 +158,12 @@ export default function PlayerBar({
           aria-label="Open queue"
           className={cn(transportBtn, 'text-player-foreground relative')}
         >
-          <ListMusic size={17} />
+          <ListMusic size={18} />
+          {queueCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-player-accent px-1 text-[9px] font-bold text-player">
+              {queueCount}
+            </span>
+          )}
         </button>
         <button
           onClick={onToggleShuffle}
@@ -179,7 +185,7 @@ export default function PlayerBar({
           onClick={onTogglePlay}
           disabled={!hasTrack}
           aria-label={isPlaying ? 'Pause' : 'Play'}
-          className={cn(transportBtn, 'px-2 text-player-foreground disabled:opacity-40')}
+          className={cn(transportBtn, 'player-play rounded-full p-2.5 disabled:opacity-40')}
         >
           {isPlaying ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
         </button>
@@ -225,4 +231,3 @@ export default function PlayerBar({
     </div>
   )
 }
-

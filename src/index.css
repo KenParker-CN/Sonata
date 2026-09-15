@@ -70,8 +70,10 @@
     --color-border: hsl(240 6% 90%);
     --color-accent: hsl(240 5% 94%);
     --color-accent-foreground: hsl(240 6% 12%);
-    --color-primary: hsl(262.1 83.3% 57.8%);
+    --color-primary: hsl(262 84% 58%);
     --color-primary-foreground: hsl(0 0% 100%);
+    --color-secondary: hsl(346 84% 61%);
+    --color-secondary-foreground: hsl(0 0% 100%);
     --color-sidebar: hsl(240 5% 97%);
     --color-sidebar-foreground: hsl(240 6% 10%);
     --color-sidebar-border: hsl(240 6% 91%);
@@ -84,8 +86,14 @@
     --color-popover-foreground: hsl(240 6% 10%);
     --color-destructive: hsl(0 72% 51%);
     --color-destructive-foreground: hsl(0 0% 100%);
+    --color-surface-elevated: hsl(0 0% 100%);
+    --color-surface-soft: hsl(250 30% 98%);
+    --color-artwork-overlay: hsl(240 10% 8% / 0.74);
+    --color-player-accent: hsl(346 84% 61%);
+    --shadow-surface: 0 18px 45px hsl(240 20% 20% / 0.08);
+    --shadow-artwork: 0 18px 35px hsl(240 30% 20% / 0.18);
 
-    --radius-lg: 8px;
+    --radius-lg: 12px;
     --radius-md: 6px;
     --radius-sm: 4px;
 
@@ -166,9 +174,17 @@
     --color-sidebar: hsl(240 6% 9%);
     --color-sidebar-foreground: hsl(240 5% 95%);
     --color-sidebar-border: hsl(240 5% 18%);
-    --color-ring: hsl(240 5% 70%);
+    --color-ring: hsl(262 84% 72%);
     --color-popover: hsl(240 6% 10%);
     --color-popover-foreground: hsl(240 5% 95%);
+    --color-secondary: hsl(346 84% 68%);
+    --color-secondary-foreground: hsl(240 6% 10%);
+    --color-surface-elevated: hsl(240 6% 12%);
+    --color-surface-soft: hsl(240 7% 11%);
+    --color-artwork-overlay: hsl(240 10% 4% / 0.76);
+    --color-player-accent: hsl(346 84% 68%);
+    --shadow-surface: 0 18px 45px hsl(0 0% 0% / 0.28);
+    --shadow-artwork: 0 18px 35px hsl(0 0% 0% / 0.42);
 }
 
 @keyframes marquee {
@@ -315,6 +331,72 @@
         animation: none;
         transform: scaleY(0.7);
     }
+}
+
+/* Shared music surfaces keep artwork and interaction states visually consistent. */
+.music-surface {
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-surface);
+}
+
+.music-surface-soft {
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
+}
+
+.player-dock {
+    position: relative;
+    box-shadow: 0 -18px 40px hsl(240 30% 4% / 0.16);
+}
+
+.player-dock::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-player-accent), transparent 72%);
+    opacity: 0.9;
+}
+
+.player-play {
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    box-shadow: 0 6px 18px hsl(262 84% 58% / 0.32);
+}
+
+.player-play:hover {
+    background: var(--color-secondary);
+}
+
+.artwork-surface {
+    box-shadow: var(--shadow-artwork);
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.artwork-surface::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent 48%, var(--color-artwork-overlay));
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+
+.artwork-surface:hover::after,
+.artwork-surface:focus-within::after {
+    opacity: 1;
+}
+
+.section-kicker {
+    color: var(--color-primary);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    text-transform: uppercase;
 }
 
 /* Base resets */

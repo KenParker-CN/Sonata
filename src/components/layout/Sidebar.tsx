@@ -46,7 +46,7 @@ function navClass({ isActive }: { isActive: boolean }): string {
   return cn(
     NAV_BASE,
     isActive
-      ? 'border-foreground font-semibold text-foreground'
+      ? 'border-primary bg-primary/8 font-semibold text-foreground'
       : 'border-transparent text-muted-foreground hover:text-foreground',
   )
 }
@@ -55,9 +55,10 @@ function navClass({ isActive }: { isActive: boolean }): string {
 // the tooltip so the column still explains itself.
 const RAIL_BTN = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 const RAIL_IDLE = 'text-muted-foreground hover:bg-accent hover:text-foreground'
+const RAIL_ACTIVE = 'bg-primary/12 text-primary shadow-sm'
 
 function railClass({ isActive }: { isActive: boolean }): string {
-  return cn(RAIL_BTN, isActive ? 'bg-accent text-foreground' : RAIL_IDLE)
+  return cn(RAIL_BTN, isActive ? RAIL_ACTIVE : RAIL_IDLE)
 }
 
 function ThemeIcon({ resolved }: { resolved: Resolved }) {
@@ -300,4 +301,3 @@ export default function Sidebar() {
     </aside>
   )
 }
-

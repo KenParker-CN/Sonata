@@ -82,17 +82,18 @@ export default function LibraryPage() {
       <div className="page-gutter pb-8">
         {tracks.length === 0 ? (
           <div className="flex min-h-[min(560px,calc(100svh-220px))] flex-col items-center justify-center px-6 py-16 text-center">
-            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+            <p className="section-kicker mb-4">A private listening space</p>
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-primary/20 bg-primary/10 text-primary shadow-[0_12px_30px_hsl(262_84%_58%_/_0.16)]">
               <LibraryBig size={28} strokeWidth={1.5} />
             </div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">Build your music library</h2>
+            <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">Build your music library</h2>
             <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
               Bring your local collection into one place for albums, artists, and focused listening.
             </p>
             <button
               type="button"
               onClick={importMusic}
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[0_8px_22px_hsl(262_84%_58%_/_0.28)] transition hover:-translate-y-0.5 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Plus size={16} />
               Add Music

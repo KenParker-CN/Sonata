@@ -11,6 +11,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/ContextMenu'
 import ArtistLinks from '@/components/data/ArtistLinks'
+import NowPlayingBars from '@/components/media/NowPlayingBars'
 import TrackMenuContent from '@/components/context-menus/TrackContextMenu'
 
 interface TrackListProps {
@@ -62,10 +63,10 @@ export default function TrackList({
               <div
                 onClick={() => onTrackSelect(index)}
                 className={cn(
-                  'flex items-center gap-3 px-4 py-2 rounded-md cursor-pointer transition-colors group',
+                  'group flex cursor-pointer items-center gap-3 rounded-xl border-l-2 px-4 py-2.5 transition-colors',
                   isActive
-                    ? 'bg-accent'
-                    : 'hover:bg-accent/50',
+                    ? 'border-primary bg-primary/10'
+                    : 'border-transparent hover:bg-accent/60',
                 )}
               >
                 {track.cover ? (
@@ -73,16 +74,17 @@ export default function TrackList({
                     src={track.cover}
                     alt=""
                     loading="lazy"
-                    className="w-10 h-10 rounded object-cover shrink-0"
+                    className="h-11 w-11 shrink-0 rounded-lg object-cover shadow-sm"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded bg-muted shrink-0" />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground/50"><span className="text-xs">♪</span></div>
                 )}
 
                 <span className={cn(
-                  'flex-1 min-w-0 text-sm truncate',
-                  isActive ? 'font-medium text-foreground' : 'text-foreground',
+                  'flex min-w-0 flex-1 items-center gap-2 truncate text-sm',
+                  isActive ? 'font-semibold text-primary' : 'text-foreground',
                 )}>
+                  {isActive && <NowPlayingBars />}
                   <Link
                     to={trackPath(track.id)}
                     className="hover:underline"
@@ -134,7 +136,7 @@ export default function TrackList({
                   </span>
                 )}
 
-                <span className="w-14 text-right text-sm text-muted-foreground tabular-nums">
+                <span className="w-14 shrink-0 text-right text-sm text-muted-foreground tabular-nums">
                   {formatTime(track.duration)}
                 </span>
               </div>
@@ -155,4 +157,3 @@ export default function TrackList({
     </div>
   )
 }
-
