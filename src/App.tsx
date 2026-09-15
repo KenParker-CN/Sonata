@@ -588,7 +588,7 @@ function App() {
     const isDesktop = useMediaQuery('(min-width: 1024px)')
 
     return (
-        <div className="relative flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Fallback for browsers without the File System Access API: pick files directly. */}
                 <input
                     ref={importInputRef}
