@@ -56,37 +56,59 @@ export function parseLyrics(raw: string | null | undefined): LyricLine[] {
     if (wordMatches.length > 0) {
       const words = wordMatches
         .map((marker, index) => ({
-          text: source.slice(marker.end, wordMatches[index + 1]?.start ?? source.length).trim(),
+          text: source.slice(marker.end, wordMatches[index + 1]?.start ?? source.length),
           start: marker.time,
           end: wordMatches[index + 1]?.time ?? null,
         }))
-        .filter(word => word.text.length > 0)
+        .filter(word => word.text.trim().length > 0)
       if (words.length > 0) {
         lines.push({
           start: words[0].start,
           end: words[words.length - 1].end,
-          text: words.map(word => word.text).join(' '),
+          text: words.map(word => word.text).join('').trim(),
           words,
         })
       }
       continue
     }
 
-    for (let index = 0; index < matches.length; index += 1) {
-      const marker = matches[index]
-      const next = matches[index + 1]
-      const text = source.slice(marker.end, next?.start ?? source.length).trim()
-      if (!text) continue
-      lines.push({
-        start: marker.time,
-        end: next?.time ?? null,
-        text,
-        words: [{ text, start: marker.time, end: next?.time ?? null }],
-      })
+    const segments = matches.map((marker, index) => ({
+      start: marker.time,
+      end: matches[index + 1]?.time ?? null,
+      raw: source.slice(marker.end, matches[index + 1]?.start ?? source.length),
+    }))
+    const words = segments
+      .filter(segment => segment.raw.trim().length > 0)
+      .map(segment => ({ text: segment.raw, start: segment.start, end: segment.end }))
+    if (words.length === 0) continue
+    if (words.length === 1) {
+      // A lone text run spans the whole line, however many stamps repeat it.
+      words[0].start = segments[0].start
+      words[0].end = segments[segments.length - 1].end
     }
+    lines.push({
+      start: segments[0].start,
+      end: segments[segments.length - 1].end,
+      text: words.map(word => word.text).join('').trim(),
+      words,
+    })
   }
 
   return lines.sort((a, b) => a.start - b.start)
+}
+
+/**
+ * Lyric text that carries no timestamps at all, kept as written so the panel
+ * can still show it. Line breaks survive; blank padding is trimmed.
+ */
+export function plainLyrics(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null
+  const text = raw
+      .split(/\r?\n/)
+      .map(line => line.trimEnd())
+      .join('\n')
+      .trim()
+  return text.length > 0 ? text : null
 }
 
 export function activeLyricIndex(lines: LyricLine[], currentTime: number): number {
