@@ -116,8 +116,8 @@ export default function PlayerBar({
           >
             <button
               type="button"
-              onClick={() => setNowPlayingOpen(true)}
-              aria-label="Open Now Playing"
+              onClick={() => setNowPlayingOpen(value => !value)}
+              aria-label={nowPlayingOpen ? 'Collapse Now Playing' : 'Open Now Playing'}
               className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {track?.cover ? (
