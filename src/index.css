@@ -17,9 +17,9 @@
     --color-primary-content: hsl(0 0% 100%);
     --color-error: hsl(0 72% 51%);
     --color-error-content: hsl(0 0% 100%);
-    --radius-box: 8px;
-    --radius-field: 6px;
-    --radius-selector: 4px;
+    --radius-box: 2px;
+    --radius-field: 2px;
+    --radius-selector: 1px;
 }
 
 @plugin "daisyui/theme" {
@@ -35,9 +35,9 @@
     --color-primary-content: hsl(240 6% 10%);
     --color-error: hsl(0 72% 51%);
     --color-error-content: hsl(0 0% 100%);
-    --radius-box: 8px;
-    --radius-field: 6px;
-    --radius-selector: 4px;
+    --radius-box: 2px;
+    --radius-field: 2px;
+    --radius-selector: 1px;
 }
 
 /* View Transitions API — the theme-switch sweep must animate the WHOLE page
@@ -93,9 +93,14 @@
     --shadow-surface: 0 18px 45px hsl(240 20% 20% / 0.08);
     --shadow-artwork: 0 18px 35px hsl(240 30% 20% / 0.18);
 
-    --radius-lg: 12px;
-    --radius-md: 6px;
-    --radius-sm: 4px;
+    --radius-xs: 1px;
+    --radius-sm: 1px;
+    --radius-md: 2px;
+    --radius-lg: 2px;
+    --radius-xl: 3px;
+    --radius-2xl: 3px;
+    --radius-3xl: 3px;
+    --radius-4xl: 3px;
 
     --font-sans: "Google Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 
@@ -242,21 +247,20 @@
 /* Fixed quality blocks use color as a quick scan signal instead of a pill badge. */
 .quality-block {
     display: inline-flex;
-    width: 4.5rem;
+    width: 6.5rem;
     height: 1.55rem;
-    flex: 0 0 4.5rem;
+    flex: 0 0 6.5rem;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
     overflow: hidden;
     border: 1px solid transparent;
-    border-radius: 0.45rem;
+    border-radius: 2px;
     padding: 0 0.4rem;
     font-size: 0.625rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     line-height: 1;
-    text-transform: uppercase;
     white-space: nowrap;
 }
 
@@ -433,20 +437,7 @@
     overflow: hidden;
 }
 
-.artwork-surface::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(180deg, transparent 48%, var(--color-artwork-overlay));
-    opacity: 0;
-    transition: opacity 180ms ease;
-}
 
-.artwork-surface:hover::after,
-.artwork-surface:focus-within::after {
-    opacity: 1;
-}
 
 .section-kicker {
     color: var(--color-primary);

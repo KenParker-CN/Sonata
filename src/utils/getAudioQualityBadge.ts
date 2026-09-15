@@ -5,6 +5,7 @@ export type AudioQualityVariant = 'master' | 'hi-res' | 'cd' | 'hq'
 export interface AudioQualityBadge {
   label: 'Master' | 'Hi-Res' | 'CD' | 'HQ'
   variant: AudioQualityVariant
+  detail: string
 }
 
 // 24-bit only counts as a master when the sample rate reaches studio territory
@@ -22,20 +23,22 @@ const HQ_MIN_BITRATE = 256_000
  */
 export function getAudioQualityBadge(track: Track): AudioQualityBadge | null {
   const { bitDepth, sampleRate, bitrate } = track
-
+  const detail = bitDepth != null
+    ? sampleRate != null ? `${bitDepth}B/${sampleRate / 1000}kHz` : `${bitDepth}B`
+    : bitrate != null ? `${Math.round(bitrate / 1000)}kbps` : ''
   if (bitDepth != null && bitDepth >= 24) {
     if (sampleRate != null && sampleRate >= MASTER_MIN_SAMPLE_RATE) {
-      return { label: 'Master', variant: 'master' }
+      return { label: 'Master', variant: 'master', detail }
     }
-    return { label: 'Hi-Res', variant: 'hi-res' }
+    return { label: 'Hi-Res', variant: 'hi-res', detail }
   }
 
   if (bitDepth === 16 && sampleRate === 44_100) {
-    return { label: 'CD', variant: 'cd' }
+    return { label: 'CD', variant: 'cd', detail }
   }
 
   if (bitrate != null && bitrate >= HQ_MIN_BITRATE && bitrate <= HQ_MAX_BITRATE) {
-    return { label: 'HQ', variant: 'hq' }
+    return { label: 'HQ', variant: 'hq', detail }
   }
 
   return null

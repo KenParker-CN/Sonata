@@ -17,8 +17,6 @@ import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import AudioQualityBadge from '@/components/media/AudioQualityBadge'
-import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
 import { artistPath, trackPath } from '@/utils/routes'
 import NowPlayingView from '@/components/layout/NowPlayingView'
 import * as React from "react";
@@ -80,9 +78,11 @@ export default function PlayerBar({
           <NowPlayingView track={track} currentTime={currentTime} />
         )}
       </AnimatePresence>
+
       <div className="player-dock h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
       {/* Left: track info  — fixed width block; the cover is anchored to its left edge regardless of title length */}
       <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
+
         <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={track?.id ?? 'no-track'}
@@ -116,13 +116,7 @@ export default function PlayerBar({
                     {track?.title ?? 'No track selected'}
                   </Link>
                 </p>
-                {track && (
-                  <AudioQualityBadge
-                    badge={getAudioQualityBadge(track)}
-                    onDark
-                    className="px-1 py-px text-[10px]"
-                  />
-                )}
+
               </div>
               <p className="truncate text-xs text-player-muted">
                 {track?.artist ? parseArtists(track.artist).map((artist, idx, arr) => (
@@ -161,6 +155,7 @@ export default function PlayerBar({
           />
           <span className="w-9 sm:w-11 shrink-0">{formatTime(duration)}</span>
         </div>
+
         {playbackError && (
           <p className="truncate text-[11px] text-destructive" role="alert">
             {playbackError}

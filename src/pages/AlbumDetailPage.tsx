@@ -2,7 +2,7 @@ import type {Track} from '@/types/music'
 import {matchesAlbum} from '@/utils/groupAlbums'
 import {groupTracksByWork, type TrackListItem, type WorkItem} from '@/utils/groupTracksByWork'
 import {parseArtists} from '@/utils/parseArtists'
-import {formatDurationLong, formatTime} from '@/utils/formatTime'
+import {formatTime} from '@/utils/formatTime'
 import {ChevronDown, Disc3} from 'lucide-react'
 import {useMemo, useState} from 'react'
 import {Link, useParams} from 'react-router-dom'
@@ -206,7 +206,7 @@ export default function AlbumDetailPage() {
         }
         return names.length > 0 ? names : [decodedAlbumArtist]
     }, [albumTracks, decodedAlbumArtist])
-    const {cover, totalDuration} = useMemo(() => ({
+    const {cover} = useMemo(() => ({
         // The album's cover is the first track that carries artwork.
         cover: albumTracks.find(t => t.cover)?.cover ?? null,
         totalDuration: albumTracks.reduce((sum, t) => sum + t.duration, 0),
@@ -261,26 +261,34 @@ export default function AlbumDetailPage() {
             {/* Album header */}
             <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8">
                 {/* Cover */}
-                <ArtPicker covers={cover ? [cover] : []} name={`${album.name} ${album.albumArtist}`}/>
+                <div className="relative mx-auto w-fit shrink-0 sm:mx-0">
+                    <ArtPicker covers={cover ? [cover] : []} name={`${album.name} ${album.albumArtist}`}/>
+                    {albumBadge && (
+                        <div className="absolute bottom-2 right-2">
+                            <AudioQualityBadge badge={albumBadge}/>
+                        </div>
+                    )}
+                </div>
 
-                {/* Info  —  —  compact stack centered against the cover */}
-                <div className="flex flex-col justify-center gap-3 min-w-0 h-auto sm:h-64 text-center sm:text-left">
-                    <div className="space-y-2">
-                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{album.name}{albumBadge &&
-                            <AudioQualityBadge badge={albumBadge}/>}</h1>
-                        <ArtistLinks
-                            artists={albumArtists}
-                            className="text-sm sm:text-base"
-                        />
-                    </div>
-                    <div
-                        className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+                {/* Info  —  —  stack centered against the cover, play pinned to the cover's bottom edge */}
+                <div className="flex flex-col gap-3 min-w-0 h-auto sm:h-64 text-center sm:text-left">
+                    <div className="flex flex-1 flex-col justify-center gap-3">
+                        <div className="space-y-2">
+                            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{album.name}</h1>
+                            <ArtistLinks
+                                artists={albumArtists}
+                                className="text-sm sm:text-base"
+                            />
+                        </div>
+                        <div
+                            className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 text-xs sm:text-sm text-muted-foreground">
             <span>
               {albumTracks[0]?.releaseDate && `${albumTracks[0].releaseDate} · `}
                 {albumTracks.length} {albumTracks.length === 1 ? 'track' : 'tracks'}
             </span>
+                        </div>
                     </div>
-                    <div className="flex justify-center sm:justify-start pt-1">
+                    <div className="flex justify-center sm:justify-start">
                         <PlayButton
                             onClick={() => playAlbum(album.name, album.albumArtist)}
                             label={`Play ${album.name}`}
@@ -355,7 +363,7 @@ export default function AlbumDetailPage() {
                                                 )}
                                             </div>
                                             <span
-                                                className="shrink-0 text-muted-foreground text-sm tabular-nums whitespace-nowrap">
+                                                className=" text-sm font-semibold tabular-nums whitespace-nowrap">
                         {formatTime(workDuration)}
                       </span>
                                         </div>
@@ -425,16 +433,11 @@ export default function AlbumDetailPage() {
 
                 {/* Track list footer */}
                 <div className="flex items-center justify-between border-t border-border text-xs text-muted-foreground">
-                    {/* Left: copyright */}
                     {albumTracks[0]?.copyright && (
                         <p className="whitespace-pre-line mt-2">
                             {albumTracks[0].copyright.replace('?', '\n?')}
                         </p>
                     )}
-                    {/* Right: total duration */}
-                    <p className="ml-auto">
-                        {formatDurationLong(totalDuration)}
-                    </p>
                 </div>
             </div>
         </div>

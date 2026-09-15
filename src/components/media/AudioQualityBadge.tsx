@@ -22,7 +22,7 @@ export default function AudioQualityBadge({ badge, className, onDark }: AudioQua
       )}
     >
       <span className="quality-block-mark" aria-hidden="true" />
-      <span>{badge.label}</span>
+      <span>{badge.detail}</span>
     </span>
   )
 }

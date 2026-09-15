@@ -83,7 +83,7 @@ export default function LibraryPage() {
         {tracks.length === 0 ? (
           <div className="flex min-h-[min(560px,calc(100svh-220px))] flex-col items-center justify-center px-6 py-16 text-center">
             <p className="section-kicker mb-4">A private listening space</p>
-            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-primary/20 bg-primary/10 text-primary shadow-[0_12px_30px_hsl(262_84%_58%_/_0.16)]">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-[0_12px_30px_hsl(262_84%_58%_/_0.16)]">
               <LibraryBig size={28} strokeWidth={1.5} />
             </div>
             <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">Build your music library</h2>
