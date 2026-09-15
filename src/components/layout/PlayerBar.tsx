@@ -77,29 +77,7 @@ export default function PlayerBar({
     <>
       <AnimatePresence>
         {nowPlayingOpen && (
-          <NowPlayingView
-            track={track}
-            hasTrack={hasTrack}
-            isPlaying={isPlaying}
-            repeatMode={repeatMode}
-            shuffle={shuffle}
-            currentTime={currentTime}
-            duration={duration}
-            volume={volume}
-            canPrev={canPrev}
-            canNext={canNext}
-            queueCount={queueCount}
-            playbackError={playbackError}
-            onCollapse={() => setNowPlayingOpen(false)}
-            onTogglePlay={onTogglePlay}
-            onPrev={onPrev}
-            onNext={onNext}
-            onSeek={onSeek}
-            onVolumeChange={onVolumeChange}
-            onCycleRepeatMode={onCycleRepeatMode}
-            onToggleShuffle={onToggleShuffle}
-            onOpenQueue={onOpenQueue}
-          />
+          <NowPlayingView track={track} />
         )}
       </AnimatePresence>
       <div className="player-dock h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
