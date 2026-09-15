@@ -77,7 +77,7 @@ export default function PlayerBar({
     <>
       <AnimatePresence>
         {nowPlayingOpen && (
-          <NowPlayingView track={track} />
+          <NowPlayingView track={track} currentTime={currentTime} />
         )}
       </AnimatePresence>
       <div className="player-dock h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">

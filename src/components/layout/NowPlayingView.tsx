@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Track } from '@/types/music'
 import { motion } from 'motion/react'
 import {
@@ -13,9 +13,11 @@ import { artistPath, trackPath } from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
 import AudioQualityBadge from '@/components/media/AudioQualityBadge'
 import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
+import { activeLyricIndex, activeWordIndex, parseLyrics } from '@/utils/lyrics'
 
 interface NowPlayingViewProps {
   track: Track | null
+  currentTime: number
 }
 
 type MobilePanel = 'details' | 'now-playing' | 'lyrics'
@@ -98,13 +100,50 @@ function MetadataPanel({ track }: { track: Track | null }) {
   )
 }
 
-function LyricsPanel() {
+function LyricsPanel({ track, currentTime }: { track: Track | null; currentTime: number }) {
+  const lines = parseLyrics(track?.lyrics)
+  const activeLine = activeLyricIndex(lines, currentTime)
+  const activeLineRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    activeLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [activeLine])
+
+  if (lines.length === 0) {
+    return (
+      <section className="flex min-h-[280px] flex-1 flex-col justify-center rounded-2xl border border-dashed border-player-border px-6 py-10 text-center">
+        <p className="text-lg font-medium text-player-foreground">Lyrics and text</p>
+        <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-player-muted">
+          Timestamped lyrics, libretti, and program notes will appear here when available in the recording metadata.
+        </p>
+      </section>
+    )
+  }
+
   return (
-    <section className="flex min-h-[280px] flex-1 flex-col justify-center rounded-2xl border border-dashed border-player-border px-6 py-10 text-center">
-      <p className="text-lg font-medium text-player-foreground">Lyrics and text</p>
-      <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-player-muted">
-        Lyrics, libretti, and program notes can live here when they are available for this recording.
-      </p>
+    <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-player-border/30 p-5 text-left" aria-label="Lyrics">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="section-kicker text-player-accent">Lyrics</p>
+        <span className="text-xs text-player-muted">Synced to playback</span>
+      </div>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2">
+        {lines.map((line, index) => {
+          const wordIndex = index === activeLine ? activeWordIndex(line.words, currentTime) : -1
+          return (
+            <div
+              key={`${line.start}-${index}`}
+              ref={index === activeLine ? activeLineRef : undefined}
+              className={cn('text-base leading-7 transition-all duration-300', index === activeLine ? 'text-player-foreground' : 'text-player-muted/60')}
+            >
+              {line.words.map((word, wordPosition) => (
+                <span key={`${word.start}-${wordPosition}`} className={cn(wordPosition <= wordIndex && 'text-player-accent')}>
+                  {word.text}{wordPosition < line.words.length - 1 ? ' ' : ''}
+                </span>
+              ))}
+            </div>
+          )
+        })}
+      </div>
     </section>
   )
 }
@@ -155,11 +194,11 @@ function MobilePager({ panel, setPanel, children }: { panel: MobilePanel; setPan
   )
 }
 
-export default function NowPlayingView({ track }: NowPlayingViewProps) {
+export default function NowPlayingView({ track, currentTime }: NowPlayingViewProps) {
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('now-playing')
   const artworkStyle = track?.cover ? ({ backgroundImage: `url(${track.cover})` } as CSSProperties) : undefined
   const details = <MetadataPanel track={track} />
-  const lyrics = <LyricsPanel />
+  const lyrics = <LyricsPanel track={track} currentTime={currentTime} />
   const nowPlaying = (
     <div className="flex flex-col items-center gap-7 lg:items-start">
       <ArtworkDisplay track={track} className="w-[min(72vw,380px)] sm:w-[min(58vw,440px)]" />
@@ -195,7 +234,7 @@ export default function NowPlayingView({ track }: NowPlayingViewProps) {
         <div className="relative hidden min-h-0 flex-1 items-center justify-center gap-10 py-8 lg:flex xl:gap-16">
           <div className="min-w-0 max-w-2xl flex-1">{nowPlaying}</div>
           <aside className="hidden max-h-[min(680px,75vh)] min-h-0 shrink-0 flex-col gap-4 overflow-hidden xl:flex xl:w-[340px]">
-            <LyricsPanel />
+            <LyricsPanel track={track} currentTime={currentTime} />
             <MetadataPanel track={track} />
           </aside>
         </div>

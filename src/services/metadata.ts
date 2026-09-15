@@ -23,6 +23,7 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
   let bitrate: number | null = null
   let codec: string | null = null
   let lossless: boolean | null = null
+  let lyrics: string | null = null
 
   try {
     const metadata = await parseBlob(file)
@@ -79,6 +80,14 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     // Copyright from metadata
     copyright = metadata.common.copyright || null
 
+    const taggedLyrics = (metadata.common as unknown as { lyrics?: unknown[] }).lyrics?.[0]
+    if (typeof taggedLyrics === 'string') {
+      lyrics = taggedLyrics
+    } else if (taggedLyrics && typeof taggedLyrics === 'object') {
+      const value = taggedLyrics as { syncText?: unknown; text?: unknown }
+      lyrics = typeof value.syncText === 'string' ? value.syncText : typeof value.text === 'string' ? value.text : null
+    }
+
     if (metadata.common.picture?.[0]) {
       const pic = metadata.common.picture[0]
       const blob = new Blob([new Uint8Array(pic.data)], { type: pic.format })
@@ -109,6 +118,7 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     bitrate,
     codec,
     lossless,
+    lyrics,
   }
 }
 
