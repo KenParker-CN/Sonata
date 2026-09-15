@@ -15,10 +15,12 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import AudioQualityBadge from '@/components/media/AudioQualityBadge'
 import { getAudioQualityBadge } from '@/utils/getAudioQualityBadge'
 import { artistPath, trackPath } from '@/utils/routes'
+import NowPlayingView from '@/components/layout/NowPlayingView'
 import * as React from "react";
 
 interface PlayerBarProps {
@@ -69,8 +71,41 @@ export default function PlayerBar({
   onToggleShuffle,
   onOpenQueue,
 }: PlayerBarProps) {
+  const [nowPlayingOpen, setNowPlayingOpen] = useState(false)
+
   return (
-    <div className="player-dock h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
+    <>
+      <AnimatePresence>
+        {nowPlayingOpen && (
+          <NowPlayingView
+            track={track}
+            hasTrack={hasTrack}
+            isPlaying={isPlaying}
+            repeatMode={repeatMode}
+            shuffle={shuffle}
+            currentTime={currentTime}
+            duration={duration}
+            volume={volume}
+            canPrev={canPrev}
+            canNext={canNext}
+            queueCount={queueCount}
+            playbackError={playbackError}
+            onCollapse={() => setNowPlayingOpen(false)}
+            onTogglePlay={onTogglePlay}
+            onPrev={onPrev}
+            onNext={onNext}
+            onSeek={onSeek}
+            onVolumeChange={onVolumeChange}
+            onCycleRepeatMode={onCycleRepeatMode}
+            onToggleShuffle={onToggleShuffle}
+            onOpenQueue={onOpenQueue}
+          />
+        )}
+      </AnimatePresence>
+      <div className={cn(
+        'player-dock h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4',
+        nowPlayingOpen && 'pointer-events-none opacity-0',
+      )}>
       {/* Left: track info  — fixed width block; the cover is anchored to its left edge regardless of title length */}
       <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
         <AnimatePresence initial={false} mode="wait">
@@ -82,13 +117,20 @@ export default function PlayerBar({
             transition={{ duration: 0.18, ease: 'easeOut' }}
             className="flex w-full items-center gap-3.5"
           >
-            {track?.cover ? (
-              <img src={track.cover} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover shadow-lg" />
-            ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-player-border text-player-muted shadow-lg">
-                <Play size={14} />
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setNowPlayingOpen(true)}
+              aria-label="Open Now Playing"
+              className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {track?.cover ? (
+                <motion.img layoutId={`now-playing-art-${track.id}`} src={track.cover} alt="" className="h-12 w-12 rounded-lg object-cover shadow-lg" />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-player-border text-player-muted shadow-lg">
+                  <Play size={14} />
+                </div>
+              )}
+            </button>
             <div className="min-w-0 flex-1 text-left">
               <div className="flex min-w-0 items-center gap-1.5">
                 <p className="truncate text-sm font-medium text-player-foreground">
@@ -228,6 +270,7 @@ export default function PlayerBar({
           style={{ '--range-fill': `${volume * 100}%` } as React.CSSProperties}
         />
       </div>
-    </div>
+      </div>
+    </>
   )
 }
