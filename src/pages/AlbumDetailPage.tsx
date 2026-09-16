@@ -343,7 +343,7 @@ export default function AlbumDetailPage() {
                                                     toggleGroup(key)
                                                 }
                                             }}
-                                            className="w-full flex items-center gap-3 pr-3 py-2 text-left hover:bg-accent/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                                            className="w-full min-h-14 flex items-center gap-3 pr-3 py-2 text-left bg-muted/20 hover:bg-accent/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                                         >
                                             {/* Same box as a track's number column, so the work title
                           starts where the movement titles do */}
@@ -399,7 +399,10 @@ export default function AlbumDetailPage() {
                                         <ContextMenuTrigger asChild>
                                             <div
                                                 onClick={() => playAlbumFrom(track.id)}
-                                                className="w-full flex items-center gap-3 pr-3 py-2 text-left transition-colors cursor-pointer hover:bg-accent/50"
+                                                className={cn(
+                                                    'relative w-full min-h-14 flex items-center gap-3 pr-3 py-2 text-left transition-colors cursor-pointer hover:bg-accent/50',
+                                                    row.kind === 'movement' && 'ml-5 border-l-2 border-primary/20 bg-muted/20 pl-3 before:absolute before:-left-3 before:top-0 before:h-1/2 before:w-3 before:border-b before:border-l before:border-border',
+                                                )}
                                             >
                         <span className="min-w-5 shrink-0 text-sm tabular-nums whitespace-nowrap text-muted-foreground">
                           {isActive && isPlaying ? <NowPlayingBars/> : number}
