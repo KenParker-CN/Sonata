@@ -1,4 +1,4 @@
-import type {CSSProperties} from 'react'
+import type {CSSProperties, RefObject} from 'react'
 import {useEffect, useRef} from 'react'
 import type {Track} from '@/types/music'
 import {motion} from 'motion/react'
@@ -13,6 +13,7 @@ interface NowPlayingViewProps {
     track: Track | null
     currentTime: number
     isPlaying: boolean
+    audioElementRef: RefObject<HTMLAudioElement | null>
     onClose: () => void
 }
 
@@ -95,28 +96,80 @@ function MetadataPanel({track}: { track: Track | null }) {
     )
 }
 
-function VisualizerPanel({track, isPlaying}: { track: Track | null; isPlaying: boolean }) {
+function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | null; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
     const artworkStyle = track?.cover ? ({'--visualizer-image': `url(${track.cover})`} as CSSProperties) : undefined
 
+    useEffect(() => {
+        const audioElement = audioElementRef.current
+        if (!audioElement || !canvasRef.current) return
+        const AudioContextClass = window.AudioContext
+        const context = new AudioContextClass()
+        const analyser = context.createAnalyser()
+        const source = context.createMediaElementSource(audioElement)
+        const canvas = canvasRef.current
+        const canvasContext = canvas.getContext('2d')
+        if (!canvasContext) return
+        analyser.fftSize = 128
+        analyser.smoothingTimeConstant = 0.82
+        source.connect(analyser)
+        analyser.connect(context.destination)
+        const values = new Uint8Array(analyser.frequencyBinCount)
+        let frame = 0
+
+        const render = () => {
+            const width = canvas.clientWidth
+            const height = canvas.clientHeight
+            const ratio = window.devicePixelRatio || 1
+            if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
+                canvas.width = width * ratio
+                canvas.height = height * ratio
+                canvasContext.setTransform(ratio, 0, 0, ratio, 0, 0)
+            }
+            analyser.getByteFrequencyData(values)
+            canvasContext.clearRect(0, 0, width, height)
+            const barWidth = width / values.length
+            const gradient = canvasContext.createLinearGradient(0, height, 0, 0)
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.12)')
+            gradient.addColorStop(0.55, 'rgba(249, 115, 178, 0.72)')
+            gradient.addColorStop(1, 'rgba(167, 139, 250, 0.95)')
+            canvasContext.fillStyle = gradient
+            values.forEach((value, index) => {
+                const level = isPlaying ? value / 255 : 0.035
+                const barHeight = Math.max(3, level * height * 0.82)
+                canvasContext.beginPath()
+                canvasContext.roundRect(index * barWidth + 1, height - barHeight, Math.max(1, barWidth - 2), barHeight, 3)
+                canvasContext.fill()
+            })
+            frame = requestAnimationFrame(render)
+        }
+
+        if (isPlaying && context.state === 'suspended') void context.resume()
+        render()
+        return () => {
+            cancelAnimationFrame(frame)
+            source.disconnect()
+            analyser.disconnect()
+            void context.close()
+        }
+    }, [audioElementRef, isPlaying])
+
     return (
-        <section
-            className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')}
-            style={artworkStyle}
-            aria-label="Music visualizer"
-        >
+        <section className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
             <div className="ambient-visualizer-wash" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-one" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-two" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-three" aria-hidden="true" />
+            <canvas ref={canvasRef} className="relative z-10 h-40 w-full" aria-hidden="true" />
             <div className="relative z-10">
                 <p className="section-kicker text-player-accent">Visualizer</p>
-                <p className="mt-2 text-sm text-player-muted">A visual space for this recording</p>
+                <p className="mt-2 text-sm text-player-muted">Audio response · no lyrics available</p>
             </div>
         </section>
     )
 }
 
-function LyricsPanel({track, currentTime, isPlaying}: { track: Track | null; currentTime: number; isPlaying: boolean }) {
+function LyricsPanel({track, currentTime, isPlaying, audioElementRef}: { track: Track | null; currentTime: number; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
     const lines = parseLyrics(track?.lyrics)
     const activeLine = activeLyricIndex(lines, currentTime)
     // Bilingual lyrics put the original and the translation under one timestamp;
@@ -131,7 +184,7 @@ function LyricsPanel({track, currentTime, isPlaying}: { track: Track | null; cur
     if (lines.length === 0) {
         const plain = plainLyrics(track?.lyrics)
         if (!plain) {
-            return <VisualizerPanel track={track} isPlaying={isPlaying} />
+            return <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef} />
         }
 
         return (
@@ -179,9 +232,7 @@ function LyricsPanel({track, currentTime, isPlaying}: { track: Track | null; cur
     )
 }
 
-export default function NowPlayingView({track, currentTime, isPlaying, onClose}: NowPlayingViewProps) {
-    const artworkStyle = track?.cover ? ({backgroundImage: `url(${track.cover})`} as CSSProperties) : undefined
-
+export default function NowPlayingView({track, currentTime, isPlaying, audioElementRef, onClose}: NowPlayingViewProps) {
     return (
         <motion.section
             initial={{opacity: 0, y: 24}}
@@ -199,8 +250,11 @@ export default function NowPlayingView({track, currentTime, isPlaying, onClose}:
             className="absolute inset-x-0 bottom-(--player-height) top-0 z-30 flex min-h-0 flex-col overflow-y-auto bg-player text-player-foreground"
             aria-label="Now Playing"
         >
-            <div className="pointer-events-none absolute inset-0 opacity-30 blur-3xl" style={artworkStyle}
-                 aria-hidden="true"/>
+            <div className={cn('now-playing-fluid pointer-events-none absolute inset-0', isPlaying && 'is-playing')} aria-hidden="true">
+                <span className="now-playing-fluid-orb now-playing-fluid-orb-one" />
+                <span className="now-playing-fluid-orb now-playing-fluid-orb-two" />
+                <span className="now-playing-fluid-orb now-playing-fluid-orb-three" />
+            </div>
             <div className="relative mx-auto flex min-h-full w-full max-w-7xl flex-1 flex-col px-5 pb-8 pt-5">
                 <div className="flex min-h-0 flex-1 gap-10">
                     {/* Left column: cover on top, info anchored to the bottom zone */}
@@ -215,7 +269,7 @@ export default function NowPlayingView({track, currentTime, isPlaying, onClose}:
 
                     {/* Right column: Lyrics - full height */}
                     <aside className="flex min-w-0 shrink-0 flex-col w-140 h-full">
-                        <LyricsPanel track={track} currentTime={currentTime} isPlaying={isPlaying}/>
+                        <LyricsPanel track={track} currentTime={currentTime} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
                     </aside>
                 </div>
             </div>

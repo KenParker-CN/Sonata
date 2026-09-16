@@ -28,6 +28,7 @@ interface PlayerBarProps {
   repeatMode: RepeatMode
   shuffle: boolean
   currentTime: number
+  audioElementRef: React.RefObject<HTMLAudioElement | null>
   duration: number
   volume: number
   canPrev: boolean
@@ -54,6 +55,7 @@ export default function PlayerBar({
   repeatMode,
   shuffle,
   currentTime,
+  audioElementRef,
   duration,
   volume,
   canPrev,
@@ -80,6 +82,7 @@ export default function PlayerBar({
             track={track}
             currentTime={currentTime}
             isPlaying={isPlaying}
+            audioElementRef={audioElementRef}
             onClose={() => setNowPlayingOpen(false)}
           />
         )}

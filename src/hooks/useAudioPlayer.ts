@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import type {RefObject} from 'react'
 import type {QueueItem, RepeatMode, Track} from '../types/music'
 
 let queueItemSeq = 0
@@ -77,6 +78,7 @@ interface AudioPlayerState {
     canPrev: boolean
     canNext: boolean
     playbackError: string | null
+    audioElementRef: RefObject<HTMLAudioElement | null>
 }
 
 interface AudioPlayerActions {
@@ -137,6 +139,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
     const [repeatMode, setRepeatMode] = useState<RepeatMode>('off')
     const [shuffle, setShuffle] = useState(false)
     const [playbackError, setPlaybackError] = useState<string | null>(null)
+    const audioElementRef = useRef<HTMLAudioElement | null>(null)
 
     // Keep refs in sync with state so event handlers always see latest values.
     // Handlers that start or stop playback also write isPlayingRef directly:
@@ -255,6 +258,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
         useEffect(() => {
             const audio = new Audio()
             audioRef.current = audio
+            audioElementRef.current = audio
 
             const onTimeUpdate = () => setCurrentTime(audio.currentTime)
             const onLoadedMetadata = () => setDuration(audio.duration)
@@ -377,6 +381,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                     decodedUrlRef.current = null
                 }
                 audioRef.current = null
+                audioElementRef.current = null
                 audio.removeEventListener('waiting', onWaiting)
                 audio.removeEventListener('stalled', onStalled)
                 audio.removeEventListener('suspend', onSuspend)
@@ -662,6 +667,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             canPrev,
             canNext,
             playbackError,
+            audioElementRef,
             playFromContext,
             playQueueItemAt,
             playNext,

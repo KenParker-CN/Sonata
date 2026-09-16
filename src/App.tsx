@@ -190,6 +190,7 @@ function App() {
         repeatMode,
         shuffle,
         playbackError,
+        audioElementRef,
         canPrev,
         canNext,
         playFromContext,
@@ -655,6 +656,7 @@ function App() {
                     repeatMode={repeatMode}
                     shuffle={shuffle}
                     currentTime={currentTime}
+                    audioElementRef={audioElementRef}
                     duration={duration}
                     volume={volume}
                     canPrev={canPrev}
