@@ -49,6 +49,8 @@ import {matchesAlbum} from '@/utils/groupAlbums'
 import {hasComposer} from '@/utils/groupComposers'
 import {hasArtist} from '@/utils/groupArtists'
 import * as React from "react";
+import {CssBaseline, ThemeProvider} from '@mui/material'
+import {createAppTheme} from '@/theme'
 
 
 /** Ids of every track an entity action applies to, in library order. */
@@ -586,9 +588,12 @@ function App() {
 
     // Desktop shows a fixed side panel; mobile uses a bottom sheet.
     const isDesktop = useMediaQuery('(min-width: 1024px)')
+    const muiTheme = useMemo(() => createAppTheme(theme), [theme])
 
     return (
-        <div className="relative flex-1 flex flex-col overflow-hidden">
+        <ThemeProvider theme={muiTheme}>
+            <CssBaseline />
+            <div className="relative flex-1 flex flex-col overflow-hidden">
                 {/* Fallback for browsers without the File System Access API: pick files directly. */}
                 <input
                     ref={importInputRef}
@@ -682,8 +687,9 @@ function App() {
           onAddToQueue={addToQueue}
         />
       )}
-    </div>
-  )
+            </div>
+        </ThemeProvider>
+    )
 }
 
 export default App
