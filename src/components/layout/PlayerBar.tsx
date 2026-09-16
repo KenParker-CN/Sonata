@@ -70,16 +70,21 @@ export default function PlayerBar({
   onOpenQueue,
 }: PlayerBarProps) {
   const [nowPlayingOpen, setNowPlayingOpen] = useState(false)
+  const nowPlayingVisible = hasTrack && nowPlayingOpen
 
   return (
     <>
       <AnimatePresence>
-        {nowPlayingOpen && (
+        {nowPlayingVisible && (
           <NowPlayingView track={track} currentTime={currentTime} />
         )}
       </AnimatePresence>
 
-      <div className="player-dock h-(--player-height) shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5 gap-1 sm:gap-4">
+      <div className={cn(
+        'player-dock shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5',
+        hasTrack ? 'h-(--player-height) gap-1 sm:gap-4' : 'h-12 justify-center',
+      )}>
+      {hasTrack ? <>
       {/* Left: track info  — fixed width block; the cover is anchored to its left edge regardless of title length */}
       <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
 
@@ -240,6 +245,9 @@ export default function PlayerBar({
           style={{ '--range-fill': `${volume * 100}%` } as React.CSSProperties}
         />
       </div>
+      </> : (
+        <p className="text-xs text-player-muted">No track selected · Choose a track to start listening</p>
+      )}
       </div>
     </>
   )
