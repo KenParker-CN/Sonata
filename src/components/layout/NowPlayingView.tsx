@@ -62,7 +62,6 @@ function MetadataPanel({track}: { track: Track | null }) {
 
     return (
         <section className="mt-2 rounded-2xl bg-player-border/30 p-5 text-left">
-            <p className="section-kicker mb-2 text-player-accent">Library metadata</p>
             {fields.length > 0 ? (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
                     {fields.map(([label, value]) => (
