@@ -1,3 +1,4 @@
+import {Button} from '@mui/material'
 import {
   Dialog,
   DialogContent,
@@ -33,19 +34,20 @@ export default function ConfirmDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <button type="button" onClick={close} className="btn btn-ghost">
+          <Button type="button" onClick={close} variant="text">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               onConfirm()
               close()
             }}
-            className="btn btn-error"
+            variant="contained"
+            color="error"
           >
             {confirmLabel}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

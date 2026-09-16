@@ -3,7 +3,8 @@ import type { PlaylistDetails } from '@/utils/playlist'
 import { useMemo, useState } from 'react'
 import { Check, Search } from 'lucide-react'
 import { parseArtists } from '@/utils/parseArtists'
-import { cn } from '@/lib/utils'
+import {Button} from '@mui/material'
+import {cn} from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -110,12 +111,12 @@ function PlaylistDetailsForm({
         />
       </div>
       <DialogFooter>
-        <button type="button" onClick={onCancel} className="btn btn-ghost">
+        <Button type="button" onClick={onCancel} variant="text">
           Cancel
-        </button>
-        <button type="submit" disabled={!trimmed} className="btn btn-primary">
+        </Button>
+        <Button type="submit" disabled={!trimmed} variant="contained">
           {mode === 'create' ? 'Create' : 'Save'}
-        </button>
+        </Button>
       </DialogFooter>
     </form>
   )
@@ -144,19 +145,20 @@ export function DeletePlaylistDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <button type="button" onClick={() => onOpenChange(false)} className="btn btn-ghost">
+          <Button type="button" onClick={() => onOpenChange(false)} variant="text">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               onConfirm()
               onOpenChange(false)
             }}
-            className="btn btn-error"
+            variant="contained"
+            color="error"
           >
             Delete
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -302,20 +304,20 @@ function AddTracksForm({
       </div>
 
       <DialogFooter>
-        <button type="button" onClick={onCancel} className="btn btn-ghost">
+        <Button type="button" onClick={onCancel} variant="text">
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={picked.length === 0}
           onClick={() => {
             onAdd(picked)
             onCancel()
           }}
-          className="btn btn-primary"
+          variant="contained"
         >
           {picked.length > 0 ? `Add ${picked.length} ${picked.length === 1 ? 'track' : 'tracks'}` : 'Add tracks'}
-        </button>
+        </Button>
       </DialogFooter>
     </>
   )
