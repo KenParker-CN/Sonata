@@ -79,6 +79,7 @@ export default function PlayerBar({
           <NowPlayingView
             track={track}
             currentTime={currentTime}
+            isPlaying={isPlaying}
             onClose={() => setNowPlayingOpen(false)}
           />
         )}

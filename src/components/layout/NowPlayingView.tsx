@@ -12,6 +12,7 @@ import {activeLyricIndex, activeWordIndex, parseLyrics, plainLyrics} from '@/uti
 interface NowPlayingViewProps {
     track: Track | null
     currentTime: number
+    isPlaying: boolean
     onClose: () => void
 }
 
@@ -94,7 +95,28 @@ function MetadataPanel({track}: { track: Track | null }) {
     )
 }
 
-function LyricsPanel({track, currentTime}: { track: Track | null; currentTime: number }) {
+function VisualizerPanel({track, isPlaying}: { track: Track | null; isPlaying: boolean }) {
+    const artworkStyle = track?.cover ? ({'--visualizer-image': `url(${track.cover})`} as CSSProperties) : undefined
+
+    return (
+        <section
+            className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')}
+            style={artworkStyle}
+            aria-label="Music visualizer"
+        >
+            <div className="ambient-visualizer-wash" aria-hidden="true" />
+            <div className="ambient-visualizer-blob ambient-visualizer-blob-one" aria-hidden="true" />
+            <div className="ambient-visualizer-blob ambient-visualizer-blob-two" aria-hidden="true" />
+            <div className="ambient-visualizer-blob ambient-visualizer-blob-three" aria-hidden="true" />
+            <div className="relative z-10">
+                <p className="section-kicker text-player-accent">Visualizer</p>
+                <p className="mt-2 text-sm text-player-muted">A visual space for this recording</p>
+            </div>
+        </section>
+    )
+}
+
+function LyricsPanel({track, currentTime, isPlaying}: { track: Track | null; currentTime: number; isPlaying: boolean }) {
     const lines = parseLyrics(track?.lyrics)
     const activeLine = activeLyricIndex(lines, currentTime)
     // Bilingual lyrics put the original and the translation under one timestamp;
@@ -109,15 +131,7 @@ function LyricsPanel({track, currentTime}: { track: Track | null; currentTime: n
     if (lines.length === 0) {
         const plain = plainLyrics(track?.lyrics)
         if (!plain) {
-            return (
-                <section
-                    className="flex min-h-70 flex-1 flex-col justify-center rounded-2xl border border-dashed border-player-border px-6 py-10 text-center">
-                    <p className="text-lg font-medium text-player-foreground">Lyrics & notes</p>
-                    <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-player-muted">
-                        Lyrics or program notes will appear here when this recording includes them.
-                    </p>
-                </section>
-            )
+            return <VisualizerPanel track={track} isPlaying={isPlaying} />
         }
 
         return (
@@ -165,7 +179,7 @@ function LyricsPanel({track, currentTime}: { track: Track | null; currentTime: n
     )
 }
 
-export default function NowPlayingView({track, currentTime, onClose}: NowPlayingViewProps) {
+export default function NowPlayingView({track, currentTime, isPlaying, onClose}: NowPlayingViewProps) {
     const artworkStyle = track?.cover ? ({backgroundImage: `url(${track.cover})`} as CSSProperties) : undefined
 
     return (
@@ -201,7 +215,7 @@ export default function NowPlayingView({track, currentTime, onClose}: NowPlaying
 
                     {/* Right column: Lyrics - full height */}
                     <aside className="flex min-w-0 shrink-0 flex-col w-140 h-full">
-                        <LyricsPanel track={track} currentTime={currentTime}/>
+                        <LyricsPanel track={track} currentTime={currentTime} isPlaying={isPlaying}/>
                     </aside>
                 </div>
             </div>
