@@ -2,8 +2,8 @@ import type {Track} from '@/types/music'
 import {matchesAlbum} from '@/utils/groupAlbums'
 import {groupTracksByWork, type TrackListItem, type WorkItem} from '@/utils/groupTracksByWork'
 import {parseArtists} from '@/utils/parseArtists'
-import {formatTime} from '@/utils/formatTime'
-import {ChevronDown, Disc3} from 'lucide-react'
+import {formatDurationLong, formatTime} from '@/utils/formatTime'
+import {ChevronDown, Disc3, ListPlus} from 'lucide-react'
 import {useMemo, useState} from 'react'
 import {Link, useParams} from 'react-router-dom'
 import {cn} from '@/lib/utils'
@@ -176,6 +176,7 @@ export default function AlbumDetailPage() {
         addTrackToPlaylist,
         removeFromLibrary,
         playAlbum,
+        playAlbumNext,
     } = useApp()
     const {albumArtist, albumName} = useParams<{ albumArtist: string; albumName: string }>()
 
@@ -206,7 +207,7 @@ export default function AlbumDetailPage() {
         }
         return names.length > 0 ? names : [decodedAlbumArtist]
     }, [albumTracks, decodedAlbumArtist])
-    const {cover} = useMemo(() => ({
+    const {cover, totalDuration} = useMemo(() => ({
         // The album's cover is the first track that carries artwork.
         cover: albumTracks.find(t => t.cover)?.cover ?? null,
         totalDuration: albumTracks.reduce((sum, t) => sum + t.duration, 0),
@@ -285,14 +286,23 @@ export default function AlbumDetailPage() {
             <span>
               {albumTracks[0]?.releaseDate && `${albumTracks[0].releaseDate} · `}
                 {albumTracks.length} {albumTracks.length === 1 ? 'track' : 'tracks'}
+                {totalDuration > 0 && <> · {formatDurationLong(totalDuration)}</>}
             </span>
                         </div>
                     </div>
-                    <div className="flex justify-center sm:justify-start">
+                    <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
                         <PlayButton
                             onClick={() => playAlbum(album.name, album.albumArtist)}
                             label={`Play ${album.name}`}
                         />
+                        <button
+                            type="button"
+                            onClick={() => playAlbumNext(album.name, album.albumArtist)}
+                            className="btn btn-outline rounded-full px-5"
+                        >
+                            <ListPlus size={15} aria-hidden="true" />
+                            Add to Queue
+                        </button>
                     </div>
                 </div>
             </div>
