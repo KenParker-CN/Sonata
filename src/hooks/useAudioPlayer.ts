@@ -3,6 +3,47 @@ import type {QueueItem, RepeatMode, Track} from '../types/music'
 
 let queueItemSeq = 0
 
+function isAlacTrack(track: Track): boolean {
+    return /alac|apple lossless/i.test(track.codec ?? '')
+}
+
+function createFloatWavUrl(channelData: Float32Array[], sampleRate: number): string {
+    const channels = channelData.length
+    const frames = channelData[0]?.length ?? 0
+    const dataSize = frames * channels * Float32Array.BYTES_PER_ELEMENT
+    const buffer = new ArrayBuffer(44 + dataSize)
+    const view = new DataView(buffer)
+    const writeAscii = (offset: number, value: string) => {
+        for (let index = 0; index < value.length; index += 1) {
+            view.setUint8(offset + index, value.charCodeAt(index))
+        }
+    }
+
+    writeAscii(0, 'RIFF')
+    view.setUint32(4, 36 + dataSize, true)
+    writeAscii(8, 'WAVE')
+    writeAscii(12, 'fmt ')
+    view.setUint32(16, 16, true)
+    view.setUint16(20, 3, true)
+    view.setUint16(22, channels, true)
+    view.setUint32(24, sampleRate, true)
+    view.setUint32(28, sampleRate * channels * Float32Array.BYTES_PER_ELEMENT, true)
+    view.setUint16(32, channels * Float32Array.BYTES_PER_ELEMENT, true)
+    view.setUint16(34, 32, true)
+    writeAscii(36, 'data')
+    view.setUint32(40, dataSize, true)
+
+    let offset = 44
+    for (let frame = 0; frame < frames; frame += 1) {
+        for (let channel = 0; channel < channels; channel += 1) {
+            view.setFloat32(offset, channelData[channel][frame] ?? 0, true)
+            offset += Float32Array.BYTES_PER_ELEMENT
+        }
+    }
+
+    return URL.createObjectURL(new Blob([buffer], {type: 'audio/wav'}))
+}
+
 function nextQueueItemId(): string {
     queueItemSeq += 1
     return `q${Date.now()}-${queueItemSeq}`
@@ -71,6 +112,8 @@ interface AudioPlayerActions {
 
 export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerActions {
     const audioRef = useRef<HTMLAudioElement | null>(null)
+    const decodedUrlRef = useRef<string | null>(null)
+    const decodeRequestRef = useRef(0)
     const isPlayingRef = useRef(false)
     const trackByIdRef = useRef<Map<string, Track>>(new Map(tracks.map(t => [t.id, t])))
 
@@ -161,20 +204,49 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
 
     setCurrentTime(0)
     setDuration(0)
+    audio.pause()
+    audio.src = ''
+    decodeRequestRef.current += 1
+    const requestId = decodeRequestRef.current
 
-    audio.src = track.url
+    if (decodedUrlRef.current) {
+        URL.revokeObjectURL(decodedUrlRef.current)
+        decodedUrlRef.current = null
+    }
 
-    void audio.play()
-        .then(() => {
-          console.log('[audio] play() resolved')
+    if (!isAlacTrack(track)) {
+        audio.src = track.url
+        void audio.play()
+            .then(() => {
+              console.log('[audio] play() resolved')
+            })
+            .catch((error) => {
+              if (error.name === 'AbortError') {
+                console.warn('[audio] play interrupted')
+                return
+              }
+
+              console.error('[audio] play() rejected', error)
+            })
+        return
+    }
+
+    void fetch(track.url)
+        .then(response => response.arrayBuffer())
+        .then(bytes => import('@audio/decode-aac').then(({default: decode}) => decode(bytes)))
+        .then(({channelData, sampleRate}) => {
+            if (requestId !== decodeRequestRef.current || !audioRef.current) return
+            const decodedUrl = createFloatWavUrl(channelData, sampleRate)
+            decodedUrlRef.current = decodedUrl
+            audio.src = decodedUrl
+            return audio.play()
         })
-        .catch((error) => {
-          if (error.name === 'AbortError') {
-            console.warn('[audio] play interrupted')
-            return
-          }
-
-          console.error('[audio] play() rejected', error)
+        .catch(error => {
+            if (requestId !== decodeRequestRef.current) return
+            console.error('[audio] ALAC decode failed', error)
+            setIsPlaying(false)
+            isPlayingRef.current = false
+            setPlaybackError(`Cannot decode "${track.title}" — the ALAC file could not be decoded.`)
         })
   }, [])
 
@@ -190,6 +262,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             // Surface decode/playback failures (e.g. DRM-protected or unsupported M4A
             // encodings such as ALAC in some browsers) instead of failing silently.
             const onError = () => {
+                if (!audio.src) return
                 audio.pause()
                 setIsPlaying(false)
                 isPlayingRef.current = false
@@ -302,6 +375,10 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                 audio.removeEventListener('error', onError)
                 audio.pause()
                 audio.src = ''
+                if (decodedUrlRef.current) {
+                    URL.revokeObjectURL(decodedUrlRef.current)
+                    decodedUrlRef.current = null
+                }
                 audioRef.current = null
                 audio.removeEventListener('waiting', onWaiting)
                 audio.removeEventListener('stalled', onStalled)
