@@ -99,7 +99,7 @@ export default function PlayerBar({
               className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {track?.cover ? (
-                <motion.img layoutId={`now-playing-art-${track.id}`} src={track.cover} alt="" className="h-12 w-12 rounded-lg object-cover shadow-lg" />
+                <img src={track.cover} alt="" className="h-12 w-12 rounded-lg object-cover shadow-lg" />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-player-border text-player-muted shadow-lg">
                   <Play size={14} />

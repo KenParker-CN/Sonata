@@ -16,14 +16,7 @@ interface NowPlayingViewProps {
 
 function ArtworkDisplay({track, className}: { track: Track | null; className?: string }) {
     return (
-        <motion.div
-            layoutId={`now-playing-art-${track?.id ?? 'empty'}`}
-            transition={{
-                layout: {
-                    duration: 0.42,
-                    ease: [0.22, 1, 0.36, 1],
-                },
-            }}
+        <div
             className={cn('artwork-surface relative aspect-square shrink-0 overflow-hidden bg-player-border shadow-2xl', className)}
         >
             <GeneratedArt
@@ -31,7 +24,7 @@ function ArtworkDisplay({track, className}: { track: Track | null; className?: s
                 src={track?.cover ?? null}
                 className="aspect-square"
             />
-        </motion.div>
+        </div>
     )
 }
 
