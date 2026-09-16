@@ -112,10 +112,9 @@ function LyricsPanel({track, currentTime}: { track: Track | null; currentTime: n
             return (
                 <section
                     className="flex min-h-70 flex-1 flex-col justify-center rounded-2xl border border-dashed border-player-border px-6 py-10 text-center">
-                    <p className="text-lg font-medium text-player-foreground">Lyrics and text</p>
+                    <p className="text-lg font-medium text-player-foreground">Lyrics & notes</p>
                     <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-player-muted">
-                        Timestamped lyrics, libretti, and program notes will appear here when available in the recording
-                        metadata.
+                        Lyrics or program notes will appear here when this recording includes them.
                     </p>
                 </section>
             )
