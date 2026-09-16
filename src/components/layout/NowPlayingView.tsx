@@ -5,13 +5,14 @@ import {motion} from 'motion/react'
 import {Link} from 'react-router-dom'
 import {cn} from '@/lib/utils'
 import {parseArtists} from '@/utils/parseArtists'
-import {artistPath} from '@/utils/routes'
+import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
 import {activeLyricIndex, activeWordIndex, parseLyrics, plainLyrics} from '@/utils/lyrics'
 
 interface NowPlayingViewProps {
     track: Track | null
     currentTime: number
+    onClose: () => void
 }
 
 function ArtworkDisplay({track, className}: { track: Track | null; className?: string }) {
@@ -28,19 +29,31 @@ function ArtworkDisplay({track, className}: { track: Track | null; className?: s
     )
 }
 
-function TrackInfo({track}: { track: Track | null }) {
+function TrackInfo({track, onNavigate}: { track: Track | null; onNavigate: () => void }) {
     const artists = track?.artist ? parseArtists(track.artist) : []
 
     return (
         <div className="mt-6">
             <h2 className="font-semibold tracking-[-0.035em] text-left">
-                {track ? <h4>{track.title}</h4> : 'No track selected'}
+                {track ? (
+                    <Link
+                        to={trackPath(track.id)}
+                        onClick={onNavigate}
+                        className="hover:underline"
+                    >
+                        {track.title}
+                    </Link>
+                ) : 'No track selected'}
             </h2>
             <div
                 className="mt-1 flex flex-wrap items-left text-player-muted">
                 {artists.length > 0 ? artists.map((artist, index) => (
                     <span key={artist}>
-            <Link to={artistPath(artist)} className="text-left hover:text-player-foreground hover:underline">
+            <Link
+                to={artistPath(artist)}
+                onClick={onNavigate}
+                className="text-left hover:text-player-foreground hover:underline"
+            >
               {artist}
             </Link>
                         {index < artists.length - 1 && '/'}
@@ -153,7 +166,7 @@ function LyricsPanel({track, currentTime}: { track: Track | null; currentTime: n
     )
 }
 
-export default function NowPlayingView({track, currentTime}: NowPlayingViewProps) {
+export default function NowPlayingView({track, currentTime, onClose}: NowPlayingViewProps) {
     const artworkStyle = track?.cover ? ({backgroundImage: `url(${track.cover})`} as CSSProperties) : undefined
 
     return (
@@ -182,7 +195,7 @@ export default function NowPlayingView({track, currentTime}: NowPlayingViewProps
                         <p className="section-kicker mb-6 shrink-0 text-player-accent">Now Playing</p>
                         <ArtworkDisplay track={track} className="w-[min(72vw,380px)] mx-auto"/>
                         <div className="mt-auto flex w-full flex-col">
-                            <TrackInfo track={track}/>
+                            <TrackInfo track={track} onNavigate={onClose}/>
                             <MetadataPanel track={track}/>
                         </div>
                     </div>

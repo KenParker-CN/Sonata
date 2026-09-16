@@ -76,7 +76,11 @@ export default function PlayerBar({
     <>
       <AnimatePresence>
         {nowPlayingVisible && (
-          <NowPlayingView track={track} currentTime={currentTime} />
+          <NowPlayingView
+            track={track}
+            currentTime={currentTime}
+            onClose={() => setNowPlayingOpen(false)}
+          />
         )}
       </AnimatePresence>
 
