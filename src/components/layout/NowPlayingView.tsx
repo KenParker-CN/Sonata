@@ -96,24 +96,46 @@ function MetadataPanel({track}: { track: Track | null }) {
     )
 }
 
-function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | null; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null)
-    const artworkStyle = track?.cover ? ({'--visualizer-image': `url(${track.cover})`} as CSSProperties) : undefined
+type AudioGraph = { context: AudioContext; analyser: AnalyserNode }
+const audioGraphs = new WeakMap<HTMLAudioElement, AudioGraph>()
 
-    useEffect(() => {
-        const audioElement = audioElementRef.current
-        if (!audioElement || !canvasRef.current) return
-        const AudioContextClass = window.AudioContext
-        const context = new AudioContextClass()
+function getAudioGraph(audioElement: HTMLAudioElement): AudioGraph | null {
+    const existing = audioGraphs.get(audioElement)
+    if (existing) return existing
+    try {
+        const context = new AudioContext()
         const analyser = context.createAnalyser()
         const source = context.createMediaElementSource(audioElement)
-        const canvas = canvasRef.current
-        const canvasContext = canvas.getContext('2d')
-        if (!canvasContext) return
         analyser.fftSize = 128
         analyser.smoothingTimeConstant = 0.82
         source.connect(analyser)
         analyser.connect(context.destination)
+        const graph = {context, analyser}
+        audioGraphs.set(audioElement, graph)
+        return graph
+    } catch {
+        return null
+    }
+}
+
+function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | null; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const isPlayingRef = useRef(isPlaying)
+    const artworkStyle = track?.cover ? ({'--visualizer-image': `url(${track.cover})`} as CSSProperties) : undefined
+
+    useEffect(() => {
+        isPlayingRef.current = isPlaying
+    }, [isPlaying])
+
+    useEffect(() => {
+        const audioElement = audioElementRef.current
+        if (!audioElement || !canvasRef.current) return
+        const graph = getAudioGraph(audioElement)
+        if (!graph) return
+        const {context, analyser} = graph
+        const canvas = canvasRef.current
+        const canvasContext = canvas.getContext('2d')
+        if (!canvasContext) return
         const values = new Uint8Array(analyser.frequencyBinCount)
         let frame = 0
 
@@ -135,7 +157,7 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
             gradient.addColorStop(1, 'rgba(167, 139, 250, 0.95)')
             canvasContext.fillStyle = gradient
             values.forEach((value, index) => {
-                const level = isPlaying ? value / 255 : 0.035
+                const level = isPlayingRef.current ? value / 255 : 0.035
                 const barHeight = Math.max(3, level * height * 0.82)
                 canvasContext.beginPath()
                 canvasContext.roundRect(index * barWidth + 1, height - barHeight, Math.max(1, barWidth - 2), barHeight, 3)
@@ -144,15 +166,12 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
             frame = requestAnimationFrame(render)
         }
 
-        if (isPlaying && context.state === 'suspended') void context.resume()
+        if (isPlayingRef.current && context.state === 'suspended') void context.resume()
         render()
         return () => {
             cancelAnimationFrame(frame)
-            source.disconnect()
-            analyser.disconnect()
-            void context.close()
         }
-    }, [audioElementRef, isPlaying])
+    }, [audioElementRef])
 
     return (
         <section className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
