@@ -18,7 +18,7 @@ function ArtworkDisplay({track, className}: { track: Track | null; className?: s
     return (
         <motion.div
             layoutId={`now-playing-art-${track?.id ?? 'empty'}`}
-            className={cn('artwork-surface overflow-hidden relative aspect-square bg-player-border shadow-2xl', className)}
+            className={cn('artwork-surface relative aspect-square shrink-0 overflow-hidden bg-player-border shadow-2xl', className)}
         >
             <GeneratedArt
                 name={track?.title ?? 'Now Playing'}

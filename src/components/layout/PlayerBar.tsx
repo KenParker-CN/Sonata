@@ -96,12 +96,12 @@ export default function PlayerBar({
               type="button"
               onClick={() => setNowPlayingOpen(value => !value)}
               aria-label={nowPlayingOpen ? 'Collapse Now Playing' : 'Open Now Playing'}
-              className="flex h-12 w-12 shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {track?.cover ? (
-                <motion.img layoutId={`now-playing-art-${track.id}`} src={track.cover} alt="" className="block h-full w-full shrink-0 rounded-lg object-cover shadow-lg" />
+                <motion.img layoutId={`now-playing-art-${track.id}`} src={track.cover} alt="" className="h-12 w-12 rounded-lg object-cover shadow-lg" />
               ) : (
-                <div className="flex h-full w-full shrink-0 items-center justify-center rounded-lg bg-player-border text-player-muted shadow-lg">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-player-border text-player-muted shadow-lg">
                   <Play size={14} />
                 </div>
               )}
