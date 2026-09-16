@@ -1,3 +1,5 @@
+import {Typography} from '@mui/material'
+
 interface PageHeaderProps {
   title: string
 }
@@ -10,8 +12,17 @@ interface PageHeaderProps {
 export default function PageHeader({ title }: PageHeaderProps) {
   return (
     <div className="page-gutter border-b border-border/60 bg-background/80 pb-5 pt-7 backdrop-blur-sm">
-      <p className="section-kicker mb-2">Your collection</p>
-      <h1 className="text-3xl font-bold tracking-[-0.03em] text-foreground">{title}</h1>
+      <Typography
+        component="p"
+        variant="overline"
+        className="section-kicker mb-2"
+        sx={{display: 'block', lineHeight: 1}}
+      >
+        Your collection
+      </Typography>
+      <Typography component="h1" variant="h4" sx={{fontWeight: 700, letterSpacing: '-0.03em'}}>
+        {title}
+      </Typography>
     </div>
   )
 }

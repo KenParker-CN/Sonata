@@ -1,9 +1,14 @@
 import TrackList from '@/components/data/TrackList'
-import { LibraryBig, Plus } from 'lucide-react'
+import { Clock3, Disc3, LibraryBig, ListMusic, MicVocal, PenLine, Plus, type LucideIcon } from 'lucide-react'
+import { Card, CardContent, Button, Stack, Typography } from '@mui/material'
 import type { SortOption } from '@/hooks/useSort'
 import type { Track } from '@/types/music'
 import { applySort, useSort } from '@/hooks/useSort'
 import { byDiscAndTrack, compareNames } from '@/utils/collate'
+import { formatDurationLong } from '@/utils/formatTime'
+import { albumKey } from '@/utils/groupAlbums'
+import { trackArtists } from '@/utils/groupArtists'
+import { trackComposers } from '@/utils/groupComposers'
 import { useMemo } from 'react'
 import PageHeader from '@/components/layout/PageHeader'
 import SearchInput from '@/components/navigation/SearchInput'
@@ -35,6 +40,32 @@ const TRACK_COMPARATORS: Record<TrackKey, (a: Track, b: Track) => number> = {
 }
 
 const NAME_OF = (track: Track) => track.title
+
+type MetricCardProps = {
+  label: string
+  value: string
+  icon: LucideIcon
+}
+
+function MetricCard({label, value, icon: Icon}: MetricCardProps) {
+  return (
+    <Card variant="outlined" className="min-w-0">
+      <CardContent className="flex items-center gap-3 !p-4 last:!pb-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon size={18} aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {label}
+          </Typography>
+          <Typography variant="h6" component="p" noWrap sx={{fontWeight: 700}}>
+            {value}
+          </Typography>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function LibraryPage() {
   const {
@@ -73,6 +104,27 @@ export default function LibraryPage() {
   )
   // The playback context for this page: the visible tracks, in the visible order.
   const visibleTrackIds = useMemo(() => visibleTracks.map(t => t.id), [visibleTracks])
+  const metrics = useMemo(() => {
+    const albums = new Set<string>()
+    const artists = new Set<string>()
+    const composers = new Set<string>()
+    let duration = 0
+
+    for (const track of tracks) {
+      albums.add(albumKey(track))
+      trackArtists(track).forEach(name => artists.add(name))
+      trackComposers(track).forEach(name => composers.add(name))
+      duration += track.duration
+    }
+
+    return {
+      tracks: tracks.length.toLocaleString(),
+      albums: albums.size.toLocaleString(),
+      artists: artists.size.toLocaleString(),
+      composers: composers.size.toLocaleString(),
+      duration: formatDurationLong(duration),
+    }
+  }, [tracks])
 
   return (
     <>
@@ -81,31 +133,53 @@ export default function LibraryPage() {
       {/* Content */}
       <div className="page-gutter pb-8">
         {tracks.length === 0 ? (
-          <div className="flex min-h-[min(560px,calc(100svh-220px))] flex-col items-center justify-center px-6 py-16 text-center">
-            <p className="section-kicker mb-4">A private listening space</p>
-            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-[0_12px_30px_hsl(262_84%_58%_/_0.16)]">
-              <LibraryBig size={28} strokeWidth={1.5} />
-            </div>
-            <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">Build your music library</h2>
-            <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-              Bring your local collection into one place for albums, artists, and focused listening.
-            </p>
-            <button
-              type="button"
-              onClick={importMusic}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[0_8px_22px_hsl(262_84%_58%_/_0.28)] transition hover:-translate-y-0.5 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <Plus size={16} />
-              Add Music
-            </button>
-            <p className="mt-3 text-xs text-muted-foreground">Pick a folder of music from your device — it stays in your library after a reload</p>
-          </div>
+          <Card variant="outlined" className="mx-auto my-10 max-w-2xl">
+            <CardContent className="flex flex-col items-center px-6 py-14 text-center sm:px-12">
+              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <LibraryBig size={28} strokeWidth={1.5} />
+              </div>
+              <Typography variant="overline" color="primary" sx={{fontWeight: 700, letterSpacing: '0.16em'}}>
+                Your personal music library
+              </Typography>
+              <Typography component="h2" variant="h4" sx={{mt: 1, fontWeight: 700, letterSpacing: '-0.03em'}}>
+                Start with your collection
+              </Typography>
+              <Typography color="text.secondary" sx={{mt: 1, maxWidth: 440}}>
+                Import a music folder to organize albums, artists, composers and focused listening in one place.
+              </Typography>
+              <Button
+                type="button"
+                onClick={importMusic}
+                variant="contained"
+                size="large"
+                startIcon={<Plus size={18} />}
+                sx={{mt: 4, borderRadius: 999, px: 3}}
+              >
+                Add Music
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{mt: 2}}>
+                Your files stay on your device after import.
+              </Typography>
+            </CardContent>
+          </Card>
         ) : (
           <>
+            <div className="grid grid-cols-2 gap-3 pb-6 sm:grid-cols-3 lg:grid-cols-5">
+              <MetricCard label="Tracks" value={metrics.tracks} icon={ListMusic} />
+              <MetricCard label="Albums" value={metrics.albums} icon={Disc3} />
+              <MetricCard label="Artists" value={metrics.artists} icon={MicVocal} />
+              <MetricCard label="Composers" value={metrics.composers} icon={PenLine} />
+              <MetricCard label="Listening time" value={metrics.duration} icon={Clock3} />
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                All Tracks
-              </h2>
+              <Stack spacing={0.25}>
+                <Typography variant="h6" component="h2" sx={{fontWeight: 700}}>
+                  All Tracks
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Browse and manage your collection
+                </Typography>
+              </Stack>
               <div className="flex flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3">
                 <p className="text-xs text-muted-foreground">{visibleTracks.length} {visibleTracks.length === 1 ? 'track' : 'tracks'}</p>
                 <SortSelect label="Sort tracks by" sort={sort} />
