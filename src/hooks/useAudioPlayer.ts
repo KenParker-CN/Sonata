@@ -259,8 +259,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             const onTimeUpdate = () => setCurrentTime(audio.currentTime)
             const onLoadedMetadata = () => setDuration(audio.duration)
 
-            // Surface decode/playback failures (e.g. DRM-protected or unsupported M4A
-            // encodings such as ALAC in some browsers) instead of failing silently.
+            // Surface decode/playback failures instead of failing silently.
             const onError = () => {
                 if (!audio.src) return
                 audio.pause()
@@ -273,11 +272,9 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                     `[audio] Playback failed (error code ${audio.error?.code ?? 'unknown'}) for ${currentTrack?.title ?? audio.src}` +
                     ` — codec: ${codec}, lossless: ${currentTrack?.lossless ?? 'unknown'}`,
                 )
-                const hint =
-                    currentTrack?.lossless || codec === 'alac'
-                        ? 'Apple Lossless (ALAC) M4A could not be decoded. Try FLAC or AAC.'
-                        : 'Unsupported audio encoding, or a DRM-protected file. Re-encode to AAC/FLAC without DRM.'
-                setPlaybackError(`Cannot play "${currentTrack?.title ?? 'this track'}" — ${hint}`)
+                setPlaybackError(
+                    `Cannot play "${currentTrack?.title ?? 'this track'}" — Unsupported audio encoding, or a DRM-protected file.`,
+                )
             }
 
             // When a track ends, advance inside the queue (repeat-one replays the item).
