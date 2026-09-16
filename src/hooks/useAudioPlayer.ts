@@ -3,8 +3,8 @@ import type {QueueItem, RepeatMode, Track} from '../types/music'
 
 let queueItemSeq = 0
 
-function isAlacTrack(track: Track): boolean {
-    return /alac|apple lossless/i.test(track.codec ?? '')
+function requiresSoftwareDecoder(track: Track): boolean {
+    return /alac|apple lossless/i.test(track.codec ?? '') || /\.(m4a|m4b|mp4|mov)$/i.test(track.filePath)
 }
 
 function createFloatWavUrl(channelData: Float32Array[], sampleRate: number): string {
@@ -214,7 +214,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
         decodedUrlRef.current = null
     }
 
-    if (!isAlacTrack(track)) {
+    if (!requiresSoftwareDecoder(track)) {
         audio.src = track.url
         void audio.play()
             .then(() => {
@@ -243,10 +243,10 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
         })
         .catch(error => {
             if (requestId !== decodeRequestRef.current) return
-            console.error('[audio] ALAC decode failed', error)
+            console.error('[audio] M4A decode failed', error)
             setIsPlaying(false)
             isPlayingRef.current = false
-            setPlaybackError(`Cannot decode "${track.title}" — the ALAC file could not be decoded.`)
+            setPlaybackError(`Cannot decode "${track.title}" — the M4A audio data could not be decoded.`)
         })
   }, [])
 
@@ -275,7 +275,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                 )
                 const hint =
                     currentTrack?.lossless || codec === 'alac'
-                        ? 'Apple Lossless (ALAC) M4A — not decodable by this browser. Convert to FLAC or AAC.'
+                        ? 'Apple Lossless (ALAC) M4A could not be decoded. Try FLAC or AAC.'
                         : 'Unsupported audio encoding, or a DRM-protected file. Re-encode to AAC/FLAC without DRM.'
                 setPlaybackError(`Cannot play "${currentTrack?.title ?? 'this track'}" — ${hint}`)
             }
