@@ -18,6 +18,12 @@ function ArtworkDisplay({track, className}: { track: Track | null; className?: s
     return (
         <motion.div
             layoutId={`now-playing-art-${track?.id ?? 'empty'}`}
+            transition={{
+                layout: {
+                    duration: 0.42,
+                    ease: [0.22, 1, 0.36, 1],
+                },
+            }}
             className={cn('artwork-surface overflow-hidden relative aspect-square bg-player-border shadow-2xl', className)}
         >
             <GeneratedArt
@@ -162,8 +168,16 @@ export default function NowPlayingView({track, currentTime}: NowPlayingViewProps
         <motion.section
             initial={{opacity: 0, y: 24}}
             animate={{opacity: 1, y: 0}}
-            exit={{opacity: 0, y: 24}}
-            transition={{duration: 0.28, ease: [0.22, 1, 0.36, 1]}}
+            exit={{
+                opacity: 0,
+                y: 24,
+                transition: {duration: 0.2, ease: [0.22, 1, 0.36, 1]},
+            }}
+            transition={{
+                duration: 0.32,
+                delay: 0.24,
+                ease: [0.22, 1, 0.36, 1],
+            }}
             className="absolute inset-x-0 bottom-(--player-height) top-0 z-30 flex min-h-0 flex-col overflow-y-auto bg-player text-player-foreground"
             aria-label="Now Playing"
         >
