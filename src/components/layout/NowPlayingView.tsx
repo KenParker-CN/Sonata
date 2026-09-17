@@ -7,7 +7,19 @@ import {cn} from '@/lib/utils'
 import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
-import {activeLyricIndex, activeWordIndex, parseLyrics, plainLyrics} from '@/utils/lyrics'
+import {activeWordIndex, parseLyrics} from '@/utils/lyrics'
+
+function activeLyricIndex(lines: ReturnType<typeof parseLyrics>, currentTime: number): number {
+    let active = -1
+    lines.forEach((line, index) => {
+        if (line.start <= currentTime) active = index
+    })
+    return active
+}
+
+function plainLyrics(raw: string | null | undefined): string | null {
+    return raw?.trim() ? raw.trim() : null
+}
 
 interface NowPlayingViewProps {
     track: Track | null

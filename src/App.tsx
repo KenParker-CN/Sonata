@@ -51,6 +51,7 @@ import {hasArtist} from '@/utils/groupArtists'
 import * as React from "react";
 import {CssBaseline, ThemeProvider} from '@mui/material'
 import {createAppTheme} from '@/theme'
+import {extractAccentColor} from '@/utils/extractAccentColor'
 
 
 /** Ids of every track an entity action applies to, in library order. */
@@ -480,6 +481,26 @@ function App() {
         ? null
         : trackById.get(currentTrackId) ?? null
 
+    // Derive the accent color from the current track's cover so the player bar
+    // and now-playing overlay share a hue that reflects the album art.
+    const [accentColor, setAccentColor] = useState<string | null>(null)
+
+    useEffect(() => {
+        const cover = currentTrack?.cover
+        let cancelled = false
+        void (async () => {
+            // Reading the color happens off the render path, so setting state
+            // here never blocks the effect body itself.
+            const color = cover ? await extractAccentColor(cover) : null
+            // A slower extraction from a previous track must not overwrite the
+            // color of the cover that is actually playing now.
+            if (!cancelled) setAccentColor(color ?? null)
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [currentTrack?.cover])
+
     const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false)
     const requestCreatePlaylist = useCallback(() => setCreatePlaylistOpen(true), [])
     const [resetLibraryOpen, setResetLibraryOpen] = useState(false)
@@ -594,7 +615,10 @@ function App() {
     return (
         <ThemeProvider theme={muiTheme}>
             <CssBaseline />
-            <div className="relative flex-1 flex flex-col overflow-hidden">
+            <div
+                className="relative flex-1 flex flex-col overflow-hidden"
+                style={{ '--player-accent': accentColor ?? undefined } as React.CSSProperties}
+            >
                 {/* Fallback for browsers without the File System Access API: pick files directly. */}
                 <input
                     ref={importInputRef}
