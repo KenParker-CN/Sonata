@@ -95,14 +95,21 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
         }
         if (entry && typeof entry === 'object') {
           const candidate = entry as Record<string, unknown>
-          // Sync-lyrics objects store the text under syncText, text, or value.
+          // Lyrics tags may contain both the timed original and an untimed translation.
+          const lyricParts: string[] = []
           for (const key of ['syncText', 'text', 'value', 'Lyrics', 'lyric']) {
             const value = candidate[key]
-            if (typeof value === 'string' && value.length > 0) {
-              collected.push(value)
-              break
+            if (typeof value === 'string' && value.trim().length > 0 && !lyricParts.includes(value)) {
+              lyricParts.push(value)
+            } else if (Array.isArray(value)) {
+              for (const part of value) {
+                if (typeof part === 'string' && part.trim().length > 0 && !lyricParts.includes(part)) {
+                  lyricParts.push(part)
+                }
+              }
             }
           }
+          if (lyricParts.length > 0) collected.push(lyricParts.join('\n'))
           // As a last resort, stringify the object and see whether it contains
           // recognizable lyric text (some encoders nest the text deeper).
           if (!candidate.syncText && !candidate.text && !candidate.value) {
