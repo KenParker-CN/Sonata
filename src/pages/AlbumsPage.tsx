@@ -20,12 +20,12 @@ import { matchesSearch } from '@/utils/search'
 import { useSearch } from '@/hooks/useSearch'
 import { useApp } from '@/contexts/app'
 
-type AlbumKey = 'name' | 'artist' | 'year' | 'tracks' | 'duration' | 'added'
+type AlbumKey = 'name' | 'artist' | 'date' | 'tracks' | 'duration' | 'added'
 
 const ALBUM_SORT_OPTIONS: SortOption<AlbumKey>[] = [
   { value: 'name', label: 'Name', natural: 'asc' },
   { value: 'artist', label: 'Artist', natural: 'asc' },
-  { value: 'year', label: 'Release year', natural: 'desc' },
+  { value: 'date', label: 'Release date', natural: 'desc' },
   { value: 'tracks', label: 'Tracks', natural: 'desc' },
   { value: 'duration', label: 'Duration', natural: 'desc' },
   { value: 'added', label: 'Recently added', natural: 'desc' },
@@ -35,7 +35,7 @@ const ALBUM_SORT_OPTIONS: SortOption<AlbumKey>[] = [
 // change rather than once per render per card.
 interface AlbumRow {
   album: Album
-  year: number | null
+  releaseDate: string | null
   trackCount: number
   duration: number
   /** Highest library index the album occupies — imports append, so this is its arrival. */
@@ -45,8 +45,7 @@ interface AlbumRow {
 const ALBUM_COMPARATORS: Record<AlbumKey, (a: AlbumRow, b: AlbumRow) => number> = {
   name: (a, b) => compareNames(a.album.name, b.album.name),
   artist: (a, b) => compareNames(a.album.albumArtist, b.album.albumArtist),
-  // Untagged albums sit at year 0, below every dated release
-  year: (a, b) => (a.year ?? 0) - (b.year ?? 0),
+  date: (a, b) => (a.releaseDate ?? '').localeCompare(b.releaseDate ?? ''),
   tracks: (a, b) => a.trackCount - b.trackCount,
   duration: (a, b) => a.duration - b.duration,
   added: (a, b) => a.addedAt - b.addedAt,
@@ -54,22 +53,22 @@ const ALBUM_COMPARATORS: Record<AlbumKey, (a: AlbumRow, b: AlbumRow) => number> 
 
 const NAME_OF = (row: AlbumRow) => row.album.name
 
-// The list view's right-aligned summary; an untagged year simply drops out
+// The list view's right-aligned summary; an untagged release date simply drops out
 function albumMeta(row: AlbumRow): string {
-  return [row.year, `${row.trackCount} ${row.trackCount === 1 ? 'track' : 'tracks'}`]
+  return [row.releaseDate, `${row.trackCount} ${row.trackCount === 1 ? 'track' : 'tracks'}`]
     .filter(Boolean)
     .join(' · ')
 }
 
-// Oldest tagged year wins, so a reissue stays where the original put it
-function earliestYear(tracks: Track[], indices: number[]): number | null {
-  let year: number | null = null
+// The earliest complete tagged date represents an album's release date.
+function earliestReleaseDate(tracks: Track[], indices: number[]): string | null {
+  let date: string | null = null
   for (const index of indices) {
-    const tagged = Number(tracks[index].releaseDate?.slice(0, 4))
+    const tagged = tracks[index].releaseDate?.trim()
     if (!tagged) continue
-    if (year === null || tagged < year) year = tagged
+    if (date === null || tagged < date) date = tagged
   }
-  return year
+  return date
 }
 
 export default function AlbumsPage() {
@@ -82,7 +81,7 @@ export default function AlbumsPage() {
       const albumTracks = album.trackIndices.map(i => tracks[i])
       return {
         album,
-        year: earliestYear(tracks, album.trackIndices),
+        releaseDate: earliestReleaseDate(tracks, album.trackIndices),
         trackCount: albumTracks.length,
         duration: albumTracks.reduce((total, track) => total + track.duration, 0),
         addedAt: Math.max(...album.trackIndices),
