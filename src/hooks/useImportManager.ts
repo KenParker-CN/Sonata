@@ -154,28 +154,40 @@ export function useImportManager(onTracksParsed: (tracks: Track[]) => void): Use
 }
 
 // IndexedDB keeps the metadata and the cover bytes so a reload doesn't have to
-// re-parse; a quota error only costs the cache, never the running library.
+// reparse; a quota error only costs the cache, never the running library.
 async function cacheImport(tracks: Track[], root: StoredRoot): Promise<void> {
-  const records: StoredTrack[] = []
-  for (const track of tracks) {
-    records.push({
-      id: track.id,
-      fileKey: track.fileKey,
-      rootId: root.id,
-      cover: track.cover ? await readCoverBytes(track.cover) : null,
-      metadata: { ...track, url: '', cover: null },
-    })
+  const records: StoredTrack[] = tracks.map(track => ({
+    id: track.id,
+    fileKey: track.fileKey,
+    rootId: root.id,
+    cover: null, // filled in below
+    metadata: { ...track, url: '', cover: null },
+  }))
+
+  // Read cover blobs concurrently so a single slow or failed fetch doesn't
+  // block the whole import. A failed fetch is treated as "no cover" — the
+  // cached track just falls back to generated art on the next load.
+  if (tracks.some(t => t.cover)) {
+    const coverResults = await Promise.all(
+      tracks.map(async (track, index) => {
+        if (!track.cover) return null
+        try {
+          const response = await fetch(track.cover)
+          if (!response.ok) return null
+          return { index, blob: await response.blob() }
+        } catch {
+          return null
+        }
+      }),
+    )
+    for (const result of coverResults) {
+      if (result) records[result.index].cover = result.blob
+    }
   }
+
   try {
     await saveImport(root, records)
   } catch (error) {
     console.error('Failed to cache the imported library', error)
   }
-}
-
-// The cover is already an object URL, so reading it back is cheaper than making
-// the parser return its bytes separately.
-async function readCoverBytes(url: string): Promise<Blob> {
-  const response = await fetch(url)
-  return response.blob()
 }

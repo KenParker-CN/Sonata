@@ -114,10 +114,10 @@ npm run lint
 `src/services/libraryStore.ts` 用 `idb` 存曲目、歌单与封面 blob。`src/services/restoreLibrary.ts` 在启动时复原，必要时重新申请 File System Access 句柄。命中缓存的曲目直接使用入库时保存的元数据，不会重新解析——因此新增解析能力后需要重新导入才能生效。
 
 ### 元数据解析
-`src/services/metadata.ts` 经由 `music-metadata-browser` 提取标签。艺术家与专辑艺术家以原始字符串保存，展示时才由 `parseArtists()` 按 `, ; / \` 拆分。歌词取自 `common.lyrics[0]`，交给 `src/utils/lyrics.ts` 解析。
+`src/services/metadata.ts` 经由 `music-metadata-browser` 提取标签。艺术家与专辑艺术家以原始字符串保存，展示时才由 `parseArtists()` 按 `, ; / \` 拆分。歌词会收集 `common.lyrics` 的全部条目（原文与译文常分条存放），拼接后交给 `src/utils/lyrics.ts` 解析。
 
 ### 歌词解析
-`src/utils/lyrics.ts` 同时处理三种写法：经典 `[mm:ss.xx] 整行`、角度括号逐词 `[mm:ss]<mm:ss.ff>词<…>`（双语原文与译词共用一个行时间戳）、方括号逐词 `[mm:ss]词[mm:ss]词`（分段的原始空格需保留，且可能把单词拆在相邻两段里）。没有任何时间戳的文本走 `plainLyrics()` 降级路径。
+`src/utils/lyrics.ts` 同时处理三种写法：经典 `[mm:ss.xx] 整行`、角度括号逐词 `[mm:ss]<mm:ss.ff>词<…>`（双语原文与译词共用一个行时间戳）、方括号逐词 `[mm:ss]词[mm:ss]词`（分段的原始空格需保留，且可能把单词拆在相邻两段里；原文行常在句尾多带一个结束时间戳）。没有时间戳的行会保留下来并锚定到上一个已知时间戳；整首歌词完全没有时间戳时，`NowPlayingView` 直接按原文显示。
 
 ## 浏览器兼容性
 

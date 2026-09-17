@@ -21,12 +21,12 @@ export interface ParsedClassicalTitle {
 }
 
 // Tags edited with a CJK IME often carry a full-width colon instead of ":".
-const COLON = /[：:](?=\s|\u00A0|\u202F)/
+const COLON = /[：:](?=[\s\u00A0\u202F])/
 
 export function parseClassicalTitle(title: string): ParsedClassicalTitle {
 
   const trimmed = title
-      ?.replace(/\u00A0|\u202F/g, ' ')
+      ?.replace(/[\u00A0\u202F]/g, ' ')
       .trim() || ''
   const separator = trimmed.search(COLON)
   console.log('parse:', {

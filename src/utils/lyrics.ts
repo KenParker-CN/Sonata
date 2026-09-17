@@ -18,7 +18,7 @@ interface TimestampMatch {
   kind: '[' | '<'
 }
 
-const timestampPattern = /(\[|<)(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?(?:\]|>)/g
+const timestampPattern = /([[<])(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?[\]>]/g
 
 function timestampToSeconds(minutes: string, seconds: string, fraction = ''): number {
   const fractionalSeconds = fraction.length === 1
@@ -30,6 +30,7 @@ function timestampToSeconds(minutes: string, seconds: string, fraction = ''): nu
 }
 
 function matchesForLine(raw: string): { matches: TimestampMatch[]; text: string } {
+  timestampPattern.lastIndex = 0
   const matches: TimestampMatch[] = []
   let match: RegExpExecArray | null
   while ((match = timestampPattern.exec(raw)) !== null) {
@@ -48,9 +49,34 @@ export function parseLyrics(raw: string | null | undefined): LyricLine[] {
   if (!raw?.trim()) return []
 
   const lines: LyricLine[] = []
+  let lastStart = 0
+  let pendingText = ''
+
   for (const rawLine of raw.split(/\r?\n/)) {
     const { matches, text: source } = matchesForLine(rawLine)
-    if (matches.length === 0) continue
+    if (matches.length === 0) {
+      // Unsynced line: append to the pending buffer. If we already have
+      // parsed lines, this line will be attached to the last known timestamp
+      // when the next synced line arrives (or at the end).
+      if (rawLine.trim().length > 0) {
+        pendingText += (pendingText.length > 0 ? '\n' : '') + rawLine
+      }
+      continue
+    }
+
+    // Flush any pending unsynced text as its own line, anchored at the
+    // last known timestamp (or 0 if nothing parsed yet).
+    if (pendingText.length > 0) {
+      lines.push({
+        start: lastStart,
+        end: null,
+        text: pendingText.trim(),
+        words: [{ text: pendingText.trim(), start: lastStart, end: null }],
+      })
+      pendingText = ''
+    }
+
+    lastStart = matches[0].time
 
     const wordMatches = matches.filter(match => match.kind === '<')
     if (wordMatches.length > 0) {
@@ -72,11 +98,18 @@ export function parseLyrics(raw: string | null | undefined): LyricLine[] {
       continue
     }
 
-    const segments = matches.map((marker, index) => ({
-      start: marker.time,
-      end: matches[index + 1]?.time ?? null,
-      raw: source.slice(marker.end, matches[index + 1]?.start ?? source.length),
-    }))
+    const segments = matches.map((marker, index) => {
+      const nextStart = matches[index + 1]?.start ?? source.length
+      // When two timestamps are back-to-back with no gap, the text between
+      // them is the word that belongs to the earlier timestamp.  Make sure
+      // we always capture it, even when nextStart equals marker.end.
+      const raw = source.slice(marker.end, nextStart)
+      return {
+        start: marker.time,
+        end: matches[index + 1]?.time ?? null,
+        raw,
+      }
+    })
     const words = segments
       .filter(segment => segment.raw.trim().length > 0)
       .map(segment => ({ text: segment.raw, start: segment.start, end: segment.end }))
@@ -94,30 +127,17 @@ export function parseLyrics(raw: string | null | undefined): LyricLine[] {
     })
   }
 
-  return lines.sort((a, b) => a.start - b.start)
-}
-
-/**
- * Lyric text that carries no timestamps at all, kept as written so the panel
- * can still show it. Line breaks survive; blank padding is trimmed.
- */
-export function plainLyrics(raw: string | null | undefined): string | null {
-  if (!raw?.trim()) return null
-  const text = raw
-      .split(/\r?\n/)
-      .map(line => line.trimEnd())
-      .join('\n')
-      .trim()
-  return text.length > 0 ? text : null
-}
-
-export function activeLyricIndex(lines: LyricLine[], currentTime: number): number {
-  let active = -1
-  for (let index = 0; index < lines.length; index += 1) {
-    if (lines[index].start <= currentTime) active = index
-    else break
+  // Flush any remaining pending unsynced text at the end of the song.
+  if (pendingText.length > 0) {
+    lines.push({
+      start: lastStart,
+      end: null,
+      text: pendingText.trim(),
+      words: [{ text: pendingText.trim(), start: lastStart, end: null }],
+    })
   }
-  return active
+
+  return lines.sort((a, b) => a.start - b.start)
 }
 
 export function activeWordIndex(words: LyricWord[], currentTime: number): number {

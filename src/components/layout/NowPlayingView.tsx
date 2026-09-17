@@ -1,41 +1,26 @@
-import type {CSSProperties, RefObject} from 'react'
-import {useEffect, useRef} from 'react'
+import {useEffect, useRef, useState} from 'react'
 import type {Track} from '@/types/music'
 import {motion} from 'motion/react'
 import {Link} from 'react-router-dom'
+import {Info} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
-import GeneratedArt from '@/components/media/GeneratedArt'
-import {activeLyricIndex, activeWordIndex, parseLyrics, plainLyrics} from '@/utils/lyrics'
+import {activeWordIndex, parseLyrics} from '@/utils/lyrics'
 
 interface NowPlayingViewProps {
     track: Track | null
     currentTime: number
     isPlaying: boolean
-    audioElementRef: RefObject<HTMLAudioElement | null>
     onClose: () => void
 }
 
-function ArtworkDisplay({track, className}: { track: Track | null; className?: string }) {
-    return (
-        <div
-            className={cn('artwork-surface relative aspect-square shrink-0 overflow-hidden bg-player-border shadow-2xl', className)}
-        >
-            <GeneratedArt
-                name={track?.title ?? 'Now Playing'}
-                src={track?.cover ?? null}
-                className="aspect-square"
-            />
-        </div>
-    )
-}
 
 function TrackInfo({track, onNavigate}: { track: Track | null; onNavigate: () => void }) {
     const artists = track?.artist ? parseArtists(track.artist) : []
 
     return (
-        <div className="mt-6">
+        <div className="min-w-0">
             <h2 className="font-semibold tracking-[-0.035em] text-left">
                 {track ? (
                     <Link
@@ -75,148 +60,78 @@ function MetadataPanel({track}: { track: Track | null }) {
 
     ].filter(([, value]) => value) : []
 
-    return (
-        <section className="mt-2 rounded-2xl bg-player-border/30 p-5 text-left">
-            {fields.length > 0 ? (
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
-                    {fields.map(([label, value]) => (
-                        <div key={label} className="min-w-0">
-                            <dt className="text-[11px] uppercase tracking-wider text-player-muted">{label}</dt>
-                            <dd className="mt-1 truncate text-sm text-player-foreground">{value}</dd>
-                        </div>
-                    ))}
-                </dl>
-            ) : (
-                <div
-                    className="rounded-xl border border-dashed border-player-border px-4 py-6 text-sm leading-6 text-player-muted">
-                    Rich recording details will appear here when they are available in your local tags.
-                </div>
-            )}
-        </section>
-    )
-}
-
-function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | null; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null)
-    const artworkStyle = track?.cover ? ({'--visualizer-image': `url(${track.cover})`} as CSSProperties) : undefined
-
-    useEffect(() => {
-        const audioElement = audioElementRef.current
-        if (!audioElement || !canvasRef.current) return
-        const AudioContextClass = window.AudioContext
-        const context = new AudioContextClass()
-        const analyser = context.createAnalyser()
-        const source = context.createMediaElementSource(audioElement)
-        const canvas = canvasRef.current
-        const canvasContext = canvas.getContext('2d')
-        if (!canvasContext) return
-        analyser.fftSize = 128
-        analyser.smoothingTimeConstant = 0.82
-        source.connect(analyser)
-        analyser.connect(context.destination)
-        const values = new Uint8Array(analyser.frequencyBinCount)
-        let frame = 0
-
-        const render = () => {
-            const width = canvas.clientWidth
-            const height = canvas.clientHeight
-            const ratio = window.devicePixelRatio || 1
-            if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
-                canvas.width = width * ratio
-                canvas.height = height * ratio
-                canvasContext.setTransform(ratio, 0, 0, ratio, 0, 0)
-            }
-            analyser.getByteFrequencyData(values)
-            canvasContext.clearRect(0, 0, width, height)
-            const barWidth = width / values.length
-            const gradient = canvasContext.createLinearGradient(0, height, 0, 0)
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.12)')
-            gradient.addColorStop(0.55, 'rgba(249, 115, 178, 0.72)')
-            gradient.addColorStop(1, 'rgba(167, 139, 250, 0.95)')
-            canvasContext.fillStyle = gradient
-            values.forEach((value, index) => {
-                const level = isPlaying ? value / 255 : 0.035
-                const barHeight = Math.max(3, level * height * 0.82)
-                canvasContext.beginPath()
-                canvasContext.roundRect(index * barWidth + 1, height - barHeight, Math.max(1, barWidth - 2), barHeight, 3)
-                canvasContext.fill()
-            })
-            frame = requestAnimationFrame(render)
-        }
-
-        if (isPlaying && context.state === 'suspended') void context.resume()
-        render()
-        return () => {
-            cancelAnimationFrame(frame)
-            source.disconnect()
-            analyser.disconnect()
-            void context.close()
-        }
-    }, [audioElementRef, isPlaying])
-
-    return (
-        <section className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
-            <div className="ambient-visualizer-wash" aria-hidden="true" />
-            <div className="ambient-visualizer-blob ambient-visualizer-blob-one" aria-hidden="true" />
-            <div className="ambient-visualizer-blob ambient-visualizer-blob-two" aria-hidden="true" />
-            <div className="ambient-visualizer-blob ambient-visualizer-blob-three" aria-hidden="true" />
-            <canvas ref={canvasRef} className="relative z-10 h-40 w-full" aria-hidden="true" />
-            <div className="relative z-10">
-                <p className="section-kicker text-player-accent">Visualizer</p>
-                <p className="mt-2 text-sm text-player-muted">Audio response · no lyrics available</p>
-            </div>
-        </section>
-    )
-}
-
-function LyricsPanel({track, currentTime, isPlaying, audioElementRef}: { track: Track | null; currentTime: number; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
-    const lines = parseLyrics(track?.lyrics)
-    const activeLine = activeLyricIndex(lines, currentTime)
-    // Bilingual lyrics put the original and the translation under one timestamp;
-    // the active group is every line sharing that timestamp, not just the last.
-    const activeStart = activeLine >= 0 ? lines[activeLine].start : null
-    const activeLineRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        activeLineRef.current?.scrollIntoView({behavior: 'smooth', block: 'center'})
-    }, [activeStart])
-
-    if (lines.length === 0) {
-        const plain = plainLyrics(track?.lyrics)
-        if (!plain) {
-            return <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef} />
-        }
-
+    if (fields.length === 0) {
         return (
-            <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-player-border/30 p-5 text-left h-full"
-                     aria-label="Lyrics">
-                <div className="mb-4 flex items-center justify-between shrink-0">
-                    <p className="section-kicker text-player-accent">Lyrics</p>
-                    <span className="text-xs text-player-muted">Not synced to playback</span>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto whitespace-pre-line pr-2 text-sm leading-7 text-player-muted">
-                    {plain}
-                </div>
-            </section>
+            <p className="mt-4 rounded-xl border border-dashed border-player-border px-3 py-4 text-xs leading-6 text-player-muted">
+                Rich recording details will appear here when they are available in your local tags.
+            </p>
         )
     }
 
     return (
-        <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-player-border/30 p-5 text-left h-full"
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 text-left">
+            {fields.map(([label, value]) => (
+                <div key={label} className="min-w-0">
+                    <dt className="text-[11px] uppercase tracking-wider text-player-muted">{label}</dt>
+                    <dd className="mt-1 truncate text-sm text-player-foreground">{value}</dd>
+                </div>
+            ))}
+        </dl>
+    )
+}
+
+function LyricsPanel({track, currentTime}: { track: Track | null; currentTime: number }) {
+    const parsedLines = parseLyrics(track?.lyrics)
+    // If the metadata contained synced lyrics (timestamps), use the parsed result.
+    // Otherwise, fall back to the raw text stored in the track — it may be plain,
+    // unsynced lyrics that the parser would otherwise discard.
+    const lines = parsedLines.length > 0
+        ? parsedLines
+        : track?.lyrics
+            ? [{ start: 0, end: null, text: track.lyrics, words: [{ text: track.lyrics, start: 0, end: null }] }]
+            : []
+    // Find the last line whose start time is <= currentTime; that is the
+    // line currently being sung. Unsynced lines (end === null) count as
+    // active once currentTime has reached or passed their start.
+    let activeLine = -1
+    for (let i = 0; i < lines.length; i += 1) {
+      if (lines[i].start <= currentTime) activeLine = i
+      else break
+    }
+    const activeStart = activeLine >= 0 ? lines[activeLine].start : null
+    const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+    // When the active line changes, scroll it into view. Delaying the scroll
+    // by one frame lets the DOM settle so the element's offset is accurate.
+    useEffect(() => {
+      if (activeLine < 0) return
+      const container = scrollContainerRef.current
+      if (!container) return
+      const activeEl = container.querySelectorAll<HTMLElement>('[data-active-line]')
+      if (activeEl.length === 0) return
+      // Scroll to show the whole active group (e.g. bilingual original +
+      // translation sharing one timestamp) rather than just the last line.
+      const first = activeEl[0].getBoundingClientRect()
+      const last = activeEl[activeEl.length - 1].getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      const groupHeight = last.bottom - first.top
+      const targetTop = first.top - containerRect.top
+      const offset = targetTop - container.clientHeight / 2 + groupHeight / 2
+      container.scrollBy({ top: offset, behavior: 'smooth' })
+    }, [activeLine])
+
+    return (
+        <section className="relative flex min-h-0 flex-1 flex-col rounded-2xl bg-player-border/30 p-5 text-left h-full"
                  aria-label="Lyrics">
-            <div className="mb-4 flex items-center justify-between shrink-0">
-                <p className="section-kicker text-player-accent">Lyrics</p>
-                <span className="text-xs text-player-muted">Synced to playback</span>
-            </div>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2">
+            <div ref={scrollContainerRef} className="min-h-0 flex-1 space-y-8 overflow-y-auto pr-10">
                 {lines.map((line, index) => {
                     const active = activeStart !== null && line.start === activeStart
                     const wordIndex = active ? activeWordIndex(line.words, currentTime) : -1
                     return (
                         <div
                             key={`${line.start}-${index}`}
-                            ref={active && lines[index - 1]?.start !== line.start ? activeLineRef : undefined}
-                            className={cn('text-sm leading-7 transition-all duration-300', active ? 'text-player-foreground' : 'text-player-muted/60')}
+                            data-active-line={active ? '' : undefined}
+                            className={cn('text-6xl leading-12 transition-all duration-300', active ? 'text-player-foreground' : 'text-player-muted/60')}
                         >
                             {line.words.map((word, wordPosition) => (
                                 <span key={`${word.start}-${wordPosition}`}
@@ -232,7 +147,34 @@ function LyricsPanel({track, currentTime, isPlaying, audioElementRef}: { track: 
     )
 }
 
-export default function NowPlayingView({track, currentTime, isPlaying, audioElementRef, onClose}: NowPlayingViewProps) {
+export default function NowPlayingView({track, currentTime, isPlaying, onClose}: NowPlayingViewProps) {
+    const [pinnedTrackId, setPinnedTrackId] = useState<string | null>(null)
+    const infoRef = useRef<HTMLDivElement>(null)
+    // Deriving the open state from the pinned track id means a newly playing
+    // track can never inherit a popover that was left pinned open.
+    const infoOpen = pinnedTrackId !== null && pinnedTrackId === track?.id
+
+    const toggleInfo = () => {
+        setPinnedTrackId(current => (current === track?.id ? null : (track?.id ?? null)))
+    }
+
+    // Clicking outside the popover, or pressing Escape, dismisses a pinned one.
+    useEffect(() => {
+        if (!infoOpen) return
+        const handlePointerDown = (event: PointerEvent) => {
+            if (!infoRef.current?.contains(event.target as Node)) setPinnedTrackId(null)
+        }
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setPinnedTrackId(null)
+        }
+        document.addEventListener('pointerdown', handlePointerDown)
+        document.addEventListener('keydown', handleKeyDown)
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown)
+            document.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [infoOpen])
+
     return (
         <motion.section
             initial={{opacity: 0, y: 24}}
@@ -256,22 +198,36 @@ export default function NowPlayingView({track, currentTime, isPlaying, audioElem
                 <span className="now-playing-fluid-orb now-playing-fluid-orb-three" />
             </div>
             <div className="relative mx-auto flex min-h-full w-full max-w-7xl flex-1 flex-col px-5 pb-8 pt-5">
-                <div className="flex min-h-0 flex-1 gap-10">
-                    {/* Left column: cover on top, info anchored to the bottom zone */}
-                    <div className="flex flex-col min-w-0 flex-1 max-w-2xl">
-                        <p className="section-kicker mb-6 shrink-0 text-player-accent">Now Playing</p>
-                        <ArtworkDisplay track={track} className="w-[min(72vw,380px)] mx-auto"/>
-                        <div className="mt-auto flex w-full flex-col">
+                {/* Lyrics fill the panel; track info and metadata sit behind the info icon. */}
+                <LyricsPanel track={track} currentTime={currentTime}/>
+
+                {track && (
+                    <div ref={infoRef} className="group absolute right-5 top-5 z-20">
+                        <button
+                            type="button"
+                            onClick={toggleInfo}
+                            aria-label="Track information"
+                            aria-expanded={infoOpen}
+                            aria-controls="now-playing-track-info"
+                            className="rounded-full p-1.5 text-player-muted transition-colors hover:text-player-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <Info size={18}/>
+                        </button>
+                        {/* Hover (or keyboard focus) reveals the details; clicking the icon pins them open. */}
+                        <div
+                            id="now-playing-track-info"
+                            className={cn(
+                                'absolute right-0 top-11 w-80 rounded-2xl border border-player-border/60 bg-player/95 p-5 text-left shadow-2xl backdrop-blur-md',
+                                'pointer-events-none opacity-0 transition-opacity duration-200',
+                                'group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100',
+                                infoOpen && 'pointer-events-auto opacity-100',
+                            )}
+                        >
                             <TrackInfo track={track} onNavigate={onClose}/>
                             <MetadataPanel track={track}/>
                         </div>
                     </div>
-
-                    {/* Right column: Lyrics - full height */}
-                    <aside className="flex min-w-0 shrink-0 flex-col w-140 h-full">
-                        <LyricsPanel track={track} currentTime={currentTime} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
-                    </aside>
-                </div>
+                )}
             </div>
         </motion.section>
     )
