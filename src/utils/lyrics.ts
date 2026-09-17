@@ -18,7 +18,7 @@ interface TimestampMatch {
   kind: '[' | '<'
 }
 
-const timestampPattern = /([[<])(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?[\]>]/g
+const timestampPattern = /(\[|<|\()(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?(\]|>|\))/g
 
 function timestampToSeconds(minutes: string, seconds: string, fraction = ''): number {
   const fractionalSeconds = fraction.length === 1
@@ -38,7 +38,7 @@ function matchesForLine(raw: string): { matches: TimestampMatch[]; text: string 
       start: match.index,
       end: timestampPattern.lastIndex,
       time: timestampToSeconds(match[2], match[3], match[4]),
-      kind: match[1] as '[' | '<',
+      kind: match[1] === '<' ? '<' : '[',
     })
   }
   timestampPattern.lastIndex = 0
@@ -80,13 +80,21 @@ export function parseLyrics(raw: string | null | undefined): LyricLine[] {
 
     const wordMatches = matches.filter(match => match.kind === '<')
     if (wordMatches.length > 0) {
-      const words = wordMatches
-        .map((marker, index) => ({
+      const lineTimestampEnd = Math.max(
+        0,
+        ...matches.filter(match => match.kind === '[').map(match => match.end),
+      )
+      const prefix = source.slice(lineTimestampEnd, wordMatches[0].start)
+      const words = [
+        ...(prefix.trim()
+          ? [{text: prefix, start: matches[0].time, end: wordMatches[0].time}]
+          : []),
+        ...wordMatches.map((marker, index) => ({
           text: source.slice(marker.end, wordMatches[index + 1]?.start ?? source.length),
           start: marker.time,
           end: wordMatches[index + 1]?.time ?? null,
-        }))
-        .filter(word => word.text.trim().length > 0)
+        })),
+      ].filter(word => word.text.trim().length > 0)
       if (words.length > 0) {
         lines.push({
           start: words[0].start,
