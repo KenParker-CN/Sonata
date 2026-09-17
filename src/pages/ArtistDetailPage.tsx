@@ -88,11 +88,11 @@ export default function ArtistDetailPage() {
         />
 
         {/* Artist info */}
-        <div className="flex min-w-0 flex-1 flex-col text-center sm:text-left">
+        <div className="flex min-w-0 flex-1 flex-col justify-between text-center sm:h-48 sm:text-left">
           <div className="space-y-2">
             <h1 className="text-xl sm:text-3xl font-bold tracking-tight">{decodedArtistName}</h1>
           </div>
-          <div className="mt-4 max-w-3xl">
+          <div className="mt-4 max-w-3xl sm:mt-auto">
             <WikiShortIntro name={decodedArtistName} subject="artist" />
           </div>
         </div>
