@@ -21,6 +21,8 @@ export interface Track {
   bitrate?: number | null
   codec?: string | null
   lossless?: boolean | null
+  replayGainTrack?: number | null
+  replayGainAlbum?: number | null
 }
 
 export interface Playlist {

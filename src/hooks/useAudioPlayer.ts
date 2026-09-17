@@ -8,6 +8,14 @@ function requiresSoftwareDecoder(track: Track): boolean {
     return /alac|apple lossless/i.test(track.codec ?? '') || /\.(m4a|m4b|mp4|mov)$/i.test(track.filePath)
 }
 
+const FADE_IN_MS = 280
+const FADE_OUT_MS = 180
+
+function replayGainMultiplier(track: Track): number {
+    const gainDb = track.replayGainTrack ?? track.replayGainAlbum ?? 0
+    return Math.pow(10, gainDb / 20)
+}
+
 function createFloatWavUrl(channelData: Float32Array[], sampleRate: number): string {
     const channels = channelData.length
     const frames = channelData[0]?.length ?? 0
@@ -117,6 +125,10 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
     const decodedUrlRef = useRef<string | null>(null)
     const softwareDecodeRef = useRef(false)
     const decodeRequestRef = useRef(0)
+    const fadeFrameRef = useRef<number | null>(null)
+    const fadeTokenRef = useRef(0)
+    const userVolumeRef = useRef(1)
+    const replayGainRef = useRef(1)
     const isPlayingRef = useRef(false)
     const trackByIdRef = useRef<Map<string, Track>>(new Map(tracks.map(t => [t.id, t])))
 
@@ -141,6 +153,48 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
     const [shuffle, setShuffle] = useState(false)
     const [playbackError, setPlaybackError] = useState<string | null>(null)
     const audioElementRef = useRef<HTMLAudioElement | null>(null)
+
+    const targetVolume = useCallback(() =>
+        Math.min(1, userVolumeRef.current * replayGainRef.current), [])
+
+    const cancelFade = useCallback(() => {
+        fadeTokenRef.current += 1
+        if (fadeFrameRef.current !== null) {
+            window.cancelAnimationFrame(fadeFrameRef.current)
+            fadeFrameRef.current = null
+        }
+    }, [])
+
+    const fadeTo = useCallback((audio: HTMLAudioElement, target: number, duration: number, onDone?: () => void) => {
+        cancelFade()
+        const token = fadeTokenRef.current
+        const start = audio.volume
+        const startedAt = performance.now()
+
+        const tick = (now: number) => {
+            if (token !== fadeTokenRef.current) return
+            const progress = Math.min(1, (now - startedAt) / duration)
+            audio.volume = start + (target - start) * progress
+            if (progress >= 1) {
+                fadeFrameRef.current = null
+                onDone?.()
+                return
+            }
+            fadeFrameRef.current = window.requestAnimationFrame(tick)
+        }
+
+        fadeFrameRef.current = window.requestAnimationFrame(tick)
+    }, [cancelFade])
+
+    const playWithFade = useCallback((audio: HTMLAudioElement) => {
+        cancelFade()
+        audio.volume = 0
+        void audio.play()
+            .then(() => fadeTo(audio, targetVolume(), FADE_IN_MS))
+            .catch(() => {
+                audio.volume = targetVolume()
+            })
+    }, [cancelFade, fadeTo, targetVolume])
 
     // Keep refs in sync with state so event handlers always see latest values.
     // Handlers that start or stop playback also write isPlayingRef directly:
@@ -209,8 +263,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
 
     setCurrentTime(0)
     setDuration(0)
-    audio.pause()
-    audio.src = ''
+    replayGainRef.current = replayGainMultiplier(track)
     decodeRequestRef.current += 1
     const requestId = decodeRequestRef.current
 
@@ -219,20 +272,29 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
         decodedUrlRef.current = null
     }
 
-    if (!requiresSoftwareDecoder(track)) {
-        audio.src = track.url
-        void audio.play()
-            .then(() => {
-              console.log('[audio] play() resolved')
-            })
-            .catch((error) => {
-              if (error.name === 'AbortError') {
-                console.warn('[audio] play interrupted')
-                return
-              }
+    const loadAndPlay = (source: string) => {
+        if (requestId !== decodeRequestRef.current) return
+        audio.src = source
+        playWithFade(audio)
+    }
 
-              console.error('[audio] play() rejected', error)
-            })
+    const replaceSource = (source: string) => {
+        const start = () => {
+            if (requestId !== decodeRequestRef.current) return
+            audio.pause()
+            audio.src = ''
+            loadAndPlay(source)
+        }
+        if (audio.src && !audio.paused) {
+            fadeTo(audio, 0, FADE_OUT_MS, start)
+        } else {
+            cancelFade()
+            start()
+        }
+    }
+
+    if (!requiresSoftwareDecoder(track)) {
+        replaceSource(track.url)
         return
     }
 
@@ -243,8 +305,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             if (requestId !== decodeRequestRef.current || !audioRef.current) return
             const decodedUrl = createFloatWavUrl(channelData, sampleRate)
             decodedUrlRef.current = decodedUrl
-            audio.src = decodedUrl
-            return audio.play()
+            replaceSource(decodedUrl)
         })
         .catch(error => {
             if (requestId !== decodeRequestRef.current) return
@@ -253,7 +314,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             isPlayingRef.current = false
             setPlaybackError(`Cannot decode "${track.title}" — the M4A audio data could not be decoded.`)
         })
-  }, [])
+  }, [cancelFade, fadeTo, playWithFade])
 
         // Audio element lives for the entire component lifecycle — never recreated.
         // playQueueItemAt has no dependencies, so this effect stays mount-only.
@@ -296,8 +357,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                 // Repeat one: replay the same track
                 if (repeatModeRef.current === 'one') {
                     audio.currentTime = 0
-                    void audio.play().catch(() => {
-                    })
+                    playWithFade(audio)
                     return
                 }
 
@@ -376,6 +436,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                 audio.removeEventListener('play', onPlay)
                 audio.removeEventListener('pause', onPause)
                 audio.removeEventListener('error', onError)
+                cancelFade()
                 audio.pause()
                 audio.src = ''
                 if (decodedUrlRef.current) {
@@ -390,7 +451,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                 audio.removeEventListener('suspend', onSuspend)
                 audio.removeEventListener('playing', onPlaying)
             }
-        }, [playQueueItemAt])
+        }, [cancelFade, playQueueItemAt, playWithFade])
 
         // ------------------------------------------------------------------
         // Queue actions
@@ -485,12 +546,14 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             const audio = audioRef.current
             if (!audio) return
             if (isPlayingRef.current) {
-                audio.pause()
-            } else {
-                void audio.play().catch(() => {
+                fadeTo(audio, 0, FADE_OUT_MS, () => {
+                    audio.pause()
+                    audio.volume = targetVolume()
                 })
+            } else {
+                playWithFade(audio)
             }
-        }, [])
+        }, [fadeTo, playWithFade, targetVolume])
 
         const seek = useCallback((time: number) => {
             const audio = audioRef.current
@@ -501,10 +564,11 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
 
         const setVolume = useCallback((vol: number) => {
             const audio = audioRef.current
-            if (!audio) return
-            audio.volume = vol
+            userVolumeRef.current = vol
             setVolumeState(vol)
-        }, [])
+            if (!audio || fadeFrameRef.current !== null) return
+            audio.volume = targetVolume()
+        }, [targetVolume])
 
         // Updaters stay pure: React calls them twice in dev StrictMode, so any ref
         // write or queue rebuild done inside one would happen twice with different
