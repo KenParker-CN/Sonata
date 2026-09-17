@@ -1,5 +1,5 @@
 import type {CSSProperties, RefObject} from 'react'
-import {useEffect, useRef} from 'react'
+import {useEffect, useRef, useState} from 'react'
 import type {Track} from '@/types/music'
 import {motion} from 'motion/react'
 import {Link} from 'react-router-dom'
@@ -191,57 +191,23 @@ function BandVisualizer({band, startRatio, endRatio, color, analyser, isPlayingR
 }
 
 function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | null; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null)
     const isPlayingRef = useRef(isPlaying)
+    const [graph, setGraph] = useState<AudioGraph | null>(null)
     const artworkStyle = track?.cover ? ({'--visualizer-image': `url(${track.cover})`} as CSSProperties) : undefined
-    const graph = audioElementRef.current ? getAudioGraph(audioElementRef.current) : null
 
     useEffect(() => {
         isPlayingRef.current = isPlaying
     }, [isPlaying])
 
     useEffect(() => {
-        if (!graph || !canvasRef.current) return
-        const {context, analyser} = graph
-        const canvas = canvasRef.current
-        const canvasContext = canvas.getContext('2d')
-        if (!canvasContext) return
-        const values = new Uint8Array(analyser.frequencyBinCount)
-        let frame = 0
-
-        const render = () => {
-            const width = canvas.clientWidth
-            const height = canvas.clientHeight
-            const ratio = window.devicePixelRatio || 1
-            if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
-                canvas.width = width * ratio
-                canvas.height = height * ratio
-                canvasContext.setTransform(ratio, 0, 0, ratio, 0, 0)
-            }
-            analyser.getByteFrequencyData(values)
-            canvasContext.clearRect(0, 0, width, height)
-            const barWidth = width / values.length
-            const gradient = canvasContext.createLinearGradient(0, height, 0, 0)
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.12)')
-            gradient.addColorStop(0.55, 'rgba(249, 115, 178, 0.72)')
-            gradient.addColorStop(1, 'rgba(167, 139, 250, 0.95)')
-            canvasContext.fillStyle = gradient
-            values.forEach((value, index) => {
-                const level = isPlayingRef.current ? value / 255 : 0.035
-                const barHeight = Math.max(3, level * height * 0.82)
-                canvasContext.beginPath()
-                canvasContext.roundRect(index * barWidth + 1, height - barHeight, Math.max(1, barWidth - 2), barHeight, 3)
-                canvasContext.fill()
-            })
-            frame = requestAnimationFrame(render)
+        const audioElement = audioElementRef.current
+        if (!audioElement) return
+        const nextGraph = getAudioGraph(audioElement)
+        setGraph(nextGraph)
+        if (nextGraph && isPlayingRef.current && nextGraph.context.state === 'suspended') {
+            void nextGraph.context.resume()
         }
-
-        if (isPlayingRef.current && context.state === 'suspended') void context.resume()
-        render()
-        return () => {
-            cancelAnimationFrame(frame)
-        }
-    }, [audioElementRef, graph])
+    }, [audioElementRef])
 
     return (
         <section className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
