@@ -7,23 +7,8 @@ import {cn} from '@/lib/utils'
 import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
-import {activeWordIndex, parseLyrics} from '@/utils/lyrics'
-
-function activeLyricIndex(lines: ReturnType<typeof parseLyrics>, currentTime: number): number {
-    let active = -1
-    lines.forEach((line, index) => {
-        if (line.start <= currentTime) active = index
-    })
-    return active
-}
-
-function plainLyrics(raw: string | null | undefined): string | null {
-    return raw?.trim() ? raw.trim() : null
-}
-
 interface NowPlayingViewProps {
     track: Track | null
-    currentTime: number
     isPlaying: boolean
     audioElementRef: RefObject<HTMLAudioElement | null>
     onClose: () => void
@@ -232,70 +217,7 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
     )
 }
 
-function LyricsPanel({track, currentTime, isPlaying, audioElementRef}: { track: Track | null; currentTime: number; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
-    const lines = parseLyrics(track?.lyrics)
-    const activeLine = activeLyricIndex(lines, currentTime)
-    // Bilingual lyrics put the original and the translation under one timestamp;
-    // the active group is every line sharing that timestamp, not just the last.
-    const activeStart = activeLine >= 0 ? lines[activeLine].start : null
-    const activeLineRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        activeLineRef.current?.scrollIntoView({behavior: 'smooth', block: 'center'})
-    }, [activeStart])
-
-    if (lines.length === 0) {
-        const plain = plainLyrics(track?.lyrics)
-        if (!plain) {
-            return <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef} />
-        }
-
-        return (
-            <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-player-border/30 p-5 text-left h-full"
-                     aria-label="Lyrics">
-                <div className="mb-4 flex items-center justify-between shrink-0">
-                    <p className="section-kicker text-player-accent">Lyrics</p>
-                    <span className="text-xs text-player-muted">Not synced to playback</span>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto whitespace-pre-line pr-2 text-sm leading-7 text-player-muted">
-                    {plain}
-                </div>
-            </section>
-        )
-    }
-
-    return (
-        <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-player-border/30 p-5 text-left h-full"
-                 aria-label="Lyrics">
-            <div className="mb-4 flex items-center justify-between shrink-0">
-                <p className="section-kicker text-player-accent">Lyrics</p>
-                <span className="text-xs text-player-muted">Synced to playback</span>
-            </div>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2">
-                {lines.map((line, index) => {
-                    const active = activeStart !== null && line.start === activeStart
-                    const wordIndex = active ? activeWordIndex(line.words, currentTime) : -1
-                    return (
-                        <div
-                            key={`${line.start}-${index}`}
-                            ref={active && lines[index - 1]?.start !== line.start ? activeLineRef : undefined}
-                            className={cn('text-sm leading-7 transition-all duration-300', active ? 'text-player-foreground' : 'text-player-muted/60')}
-                        >
-                            {line.words.map((word, wordPosition) => (
-                                <span key={`${word.start}-${wordPosition}`}
-                                      className={cn(wordPosition <= wordIndex && 'text-player-accent')}>
-                  {word.text}
-                </span>
-                            ))}
-                        </div>
-                    )
-                })}
-            </div>
-        </section>
-    )
-}
-
-export default function NowPlayingView({track, currentTime, isPlaying, audioElementRef, onClose}: NowPlayingViewProps) {
+export default function NowPlayingView({track, isPlaying, audioElementRef, onClose}: NowPlayingViewProps) {
     return (
         <motion.section
             initial={{opacity: 0, y: 24}}
@@ -329,9 +251,9 @@ export default function NowPlayingView({track, currentTime, isPlaying, audioElem
                         </div>
                     </div>
 
-                    {/* Right column: Lyrics - full height */}
+                    {/* Right column: audio visualizer */}
                     <aside className="flex min-w-0 shrink-0 flex-col w-140 h-full">
-                        <LyricsPanel track={track} currentTime={currentTime} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
+                        <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
                     </aside>
                 </div>
             </div>

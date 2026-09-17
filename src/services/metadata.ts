@@ -23,7 +23,6 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
   let bitrate: number | null = null
   let codec: string | null = null
   let lossless: boolean | null = null
-  let lyrics: string | null = null
 
   try {
     const metadata = await parseBlob(file)
@@ -80,44 +79,6 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     // Copyright from metadata
     copyright = metadata.common.copyright || null
 
-    // Lyrics from metadata. music-metadata-browser exposes lyrics in a few
-    // different shapes depending on the tag type and the library version, so
-    // try several paths before giving up.
-    const rawLyrics = (metadata.common as unknown as {
-      lyrics?: unknown[]
-    }).lyrics
-    if (rawLyrics && rawLyrics.length > 0) {
-      const collected: string[] = []
-      for (const entry of rawLyrics) {
-        if (typeof entry === 'string') {
-          collected.push(entry)
-          continue
-        }
-        if (entry && typeof entry === 'object') {
-          const candidate = entry as Record<string, unknown>
-          // Sync-lyrics objects store the text under syncText, text, or value.
-          for (const key of ['syncText', 'text', 'value', 'Lyrics', 'lyric']) {
-            const value = candidate[key]
-            if (typeof value === 'string' && value.length > 0) {
-              collected.push(value)
-              break
-            }
-          }
-          // As a last resort, stringify the object and see whether it contains
-          // recognizable lyric text (some encoders nest the text deeper).
-          if (!candidate.syncText && !candidate.text && !candidate.value) {
-            const flattened = JSON.stringify(entry).replace(/"|^\[|\\]/g, '')
-            if (flattened.length > 10 && !flattened.includes('undefined')) {
-              collected.push(flattened)
-            }
-          }
-        }
-      }
-      // Join every collected piece with a blank line so the parser can keep
-      // each language / stanza as its own block while still seeing the timestamps.
-      lyrics = collected.length > 0 ? collected.join('\n\n') : null
-    }
-
     if (metadata.common.picture?.[0]) {
       const pic = metadata.common.picture[0]
       const blob = new Blob([new Uint8Array(pic.data)], { type: pic.format })
@@ -148,7 +109,6 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     bitrate,
     codec,
     lossless,
-    lyrics,
   }
 }
 

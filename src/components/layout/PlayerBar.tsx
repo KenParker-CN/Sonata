@@ -69,7 +69,6 @@ export default function PlayerBar({
                 {nowPlayingVisible && (
                     <NowPlayingView
                         track={track}
-                        currentTime={currentTime}
                         isPlaying={isPlaying}
                         audioElementRef={audioElementRef}
                         onClose={() => setNowPlayingOpen(false)}

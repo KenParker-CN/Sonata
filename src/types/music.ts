@@ -21,7 +21,6 @@ export interface Track {
   bitrate?: number | null
   codec?: string | null
   lossless?: boolean | null
-  lyrics?: string | null
 }
 
 export interface Playlist {
