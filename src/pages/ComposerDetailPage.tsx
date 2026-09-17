@@ -5,7 +5,7 @@ import { formatTime, formatDurationLong } from '@/utils/formatTime'
 import { albumPath } from '@/utils/routes'
 import { PenLine } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import AlbumContextMenu from '@/components/context-menus/AlbumContextMenu'
 import ArtPicker from '@/components/media/ArtPicker'
 import ArtistLinks from '@/components/data/ArtistLinks'
@@ -86,6 +86,12 @@ export default function ComposerDetailPage() {
         ),
   }), [works, orderedTracks, search.terms])
   const visibleTrackIds = useMemo(() => visibleTracks.map(t => t.id), [visibleTracks])
+  const recordingsPerPage = 20
+  const recordingsPageCount = Math.max(1, Math.ceil(visibleTracks.length / recordingsPerPage))
+  const [recordingsPage, setRecordingsPage] = useState(1)
+  const currentRecordingsPage = Math.min(recordingsPage, recordingsPageCount)
+  const recordingsPageStart = (currentRecordingsPage - 1) * recordingsPerPage
+  const pagedRecordings = visibleTracks.slice(recordingsPageStart, recordingsPageStart + recordingsPerPage)
 
   if (composerTracks.length === 0) {
     return (
@@ -117,16 +123,16 @@ export default function ComposerDetailPage() {
               </h1>
               <p className="text-sm text-muted-foreground mt-2">
                 {albums.length} {albums.length === 1 ? 'work' : 'works'} ·{' '}
-                {composerTracks.length} {composerTracks.length === 1 ? 'track' : 'tracks'} ·{' '}
+                {composerTracks.length} {composerTracks.length === 1 ? 'recording' : 'recordings'} ·{' '}
                 {formatDurationLong(totalDuration)}
               </p>
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">
-            <SearchInput label="Search works and tracks" value={search.query} onChange={search.setQuery} />
+            <SearchInput label="Search works and recordings" value={search.query} onChange={search.setQuery} />
             <PlayButton
               onClick={() => playComposer(decodedComposerName)}
-              label={`Play works by ${decodedComposerName}`}
+              label={`Play recordings by ${decodedComposerName}`}
               className="shrink-0"
             />
           </div>
@@ -137,10 +143,10 @@ export default function ComposerDetailPage() {
         <SearchEmptyState query={search.query} onClear={() => search.setQuery('')} />
       )}
 
-      {/* Works  — compact rows, the main body of the page */}
+      {/* Recordings grouped by album */}
       {visibleWorks.length > 0 && (
         <section className="mb-10">
-          <h2 className="text-sm font-semibold tracking-tight mb-3">Works</h2>
+          <h2 className="text-sm font-semibold tracking-tight mb-3">Recordings in albums</h2>
           <div className="flex flex-col -mx-2">
             {visibleWorks.map(({ album, trackCount, duration }) => (
               <AlbumContextMenu
@@ -188,21 +194,49 @@ export default function ComposerDetailPage() {
         </section>
       )}
 
-      {/* Tracks  — compact table list */}
+      {/* Individual recordings with pagination */}
       {visibleTracks.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold tracking-tight mb-3">Tracks</h2>
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <h2 className="text-sm font-semibold tracking-tight">Recordings</h2>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {visibleTracks.length} {visibleTracks.length === 1 ? 'recording' : 'recordings'}
+            </span>
+          </div>
           <TrackList
-            tracks={visibleTracks}
+            tracks={pagedRecordings}
             currentTrackId={currentTrackId}
             playlists={playlists}
-            onTrackSelect={index => playFromContext(visibleTrackIds, index)}
+            onTrackSelect={index => playFromContext(visibleTrackIds, recordingsPageStart + index)}
             onPlayNext={playTrackNext}
             onAddToQueue={addTrackToQueue}
             onAddToPlaylist={addTrackToPlaylist}
             links={{ album: true, artist: true }}
             onRemoveFromLibrary={removeFromLibrary}
           />
+          {recordingsPageCount > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-40"
+                disabled={currentRecordingsPage === 1}
+                onClick={() => setRecordingsPage(page => Math.max(1, page - 1))}
+              >
+                Previous
+              </button>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                Page {currentRecordingsPage} of {recordingsPageCount}
+              </span>
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-40"
+                disabled={currentRecordingsPage === recordingsPageCount}
+                onClick={() => setRecordingsPage(page => Math.min(recordingsPageCount, page + 1))}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </section>
       )}
 
