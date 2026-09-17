@@ -170,7 +170,7 @@ function BandVisualizer({band, startRatio, endRatio, color, analyser, isPlayingR
                 <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-player-foreground">{band}</span>
                 <span className="text-[10px] text-player-muted">FFT</span>
             </div>
-            <canvas ref={canvasRef} className="h-24 w-full" aria-label={`${band} frequency visualizer`} />
+            <canvas ref={canvasRef} className="h-20 w-full" aria-label={`${band} frequency visualizer`} />
         </div>
     )
 }
@@ -195,12 +195,12 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
     }, [audioElementRef])
 
     return (
-        <section className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
+        <section className={cn('ambient-visualizer relative flex min-h-0 w-full flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-4', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
             <div className="ambient-visualizer-wash" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-one" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-two" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-three" aria-hidden="true" />
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
                 {graph ? (
                     <BandVisualizer band="Visualizer" startRatio={0} endRatio={1} color="rgba(249, 115, 178, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
                 ) : (
@@ -235,15 +235,17 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onClo
                 <span className="now-playing-fluid-orb now-playing-fluid-orb-three" />
             </div>
             <div className="relative mx-auto flex min-h-full w-full max-w-7xl flex-1 flex-col px-5 pb-8 pt-5">
-                <div className="flex min-h-0 flex-1 flex-col gap-8 lg:flex-row lg:gap-10">
+                <div className="flex min-h-0 flex-1 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
                     {/* Left column: cover and one full-spectrum visualizer */}
-                    <div className="flex min-w-0 flex-1 max-w-2xl flex-col gap-6">
-                        <ArtworkDisplay track={track} className="w-[min(72vw,380px)] mx-auto"/>
-                        <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
+                    <div className="flex min-w-0 flex-1 max-w-2xl flex-col items-center gap-3">
+                        <ArtworkDisplay track={track} className="w-[min(72vw,380px)]"/>
+                        <div className="w-[min(72vw,380px)]">
+                            <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
+                        </div>
                     </div>
 
                     {/* Right column: track details and metadata */}
-                    <aside className="flex min-w-0 w-full shrink-0 flex-col justify-center lg:h-full lg:w-140">
+                    <aside className="flex min-w-0 w-full shrink-0 flex-col justify-start lg:h-full lg:w-140">
                         <TrackInfo track={track} onNavigate={onClose}/>
                         <MetadataPanel track={track}/>
                     </aside>
