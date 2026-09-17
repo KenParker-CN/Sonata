@@ -61,11 +61,11 @@ export default function TrackDetailPage() {
   }
 
   return (
-    <div className="page-gutter pt-6 pb-8">
+    <div className="page-gutter pt-6 pb-8 flex flex-col">
       <BackLink to="/library" label="Back to library" />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-6 mb-8">
+      <div className="order-1 flex flex-col sm:flex-row gap-6 mb-8">
         <div className="w-40 h-40 sm:w-56 sm:h-56 shrink-0 rounded-lg overflow-hidden bg-muted mx-auto sm:mx-0">
           {track.cover ? (
             <img src={track.cover} alt="" className="w-full h-full object-cover" />
@@ -91,7 +91,7 @@ export default function TrackDetailPage() {
       </div>
 
       {/* Basic Info */}
-      <section className="mb-8">
+      <section className="order-3 mb-8">
         <h2 className="text-lg font-semibold mb-4">Basic Info</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoItem
@@ -164,7 +164,7 @@ export default function TrackDetailPage() {
       </section>
 
       {/* Technical Info */}
-      <section className="mb-8">
+      <section className="order-4 mb-8">
         <h2 className="text-lg font-semibold mb-4">Technical Info</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoItem
@@ -197,7 +197,7 @@ export default function TrackDetailPage() {
 
       {/* Performers & Composers */}
       {(performers.length > 0 || composers.length > 0) && (
-        <section className="mb-8">
+        <section className="order-2 mb-8">
           <h2 className="text-lg font-semibold mb-4">Credits</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {performers.length > 0 && (
@@ -245,7 +245,7 @@ export default function TrackDetailPage() {
       )}
 
       {/* Metadata Table */}
-      <section>
+      <section className="order-5">
         <h2 className="text-lg font-semibold mb-4">Metadata</h2>
         <div className="border border-border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
