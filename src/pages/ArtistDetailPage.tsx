@@ -92,9 +92,6 @@ export default function ArtistDetailPage() {
           <div className="space-y-2">
             <h1 className="text-xl sm:text-3xl font-bold tracking-tight">{decodedArtistName}</h1>
           </div>
-          <div className="mt-4 max-w-3xl sm:mt-auto">
-            <WikiShortIntro name={decodedArtistName} subject="artist" />
-          </div>
         </div>
       </div>
 
@@ -176,6 +173,10 @@ export default function ArtistDetailPage() {
             </Shelf>
           </section>
         )}
+      </div>
+
+      <div className="mt-10">
+        <WikiShortIntro name={decodedArtistName} subject="artist" />
       </div>
     </div>
   )

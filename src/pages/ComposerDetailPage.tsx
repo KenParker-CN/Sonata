@@ -120,9 +120,6 @@ export default function ComposerDetailPage() {
                 {composerTracks.length} {composerTracks.length === 1 ? 'track' : 'tracks'} ·{' '}
                 {formatDurationLong(totalDuration)}
               </p>
-              <div className="mt-4 max-w-3xl">
-                <WikiShortIntro name={decodedComposerName} subject="composer" />
-              </div>
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">
@@ -208,6 +205,10 @@ export default function ComposerDetailPage() {
           />
         </section>
       )}
+
+      <div className="mt-10">
+        <WikiShortIntro name={decodedComposerName} subject="composer" />
+      </div>
     </div>
   )
 }
