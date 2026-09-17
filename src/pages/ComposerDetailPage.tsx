@@ -82,7 +82,7 @@ export default function ComposerDetailPage() {
       {/* Compact header  — the name is the identity; the avatar is a portrait once uploaded */}
       <div className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
-          <div className="flex min-w-0 items-start gap-4">
+          <div className="flex min-w-0 items-center gap-4">
             <ArtPicker
               name={decodedComposerName}
               upload={{ artId: composerArtId(decodedComposerName), noun: 'composer portrait' }}
