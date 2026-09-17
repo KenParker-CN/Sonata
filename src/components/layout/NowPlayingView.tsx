@@ -290,7 +290,6 @@ export default function NowPlayingView({track, currentTime, isPlaying, audioElem
                 <div className="flex min-h-0 flex-1 gap-10">
                     {/* Left column: cover on top, info anchored to the bottom zone */}
                     <div className="flex flex-col min-w-0 flex-1 max-w-2xl">
-                        <p className="section-kicker mb-6 shrink-0 text-player-accent">Now Playing</p>
                         <ArtworkDisplay track={track} className="w-[min(72vw,380px)] mx-auto"/>
                         <div className="mt-auto flex w-full flex-col">
                             <TrackInfo track={track} onNavigate={onClose}/>
