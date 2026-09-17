@@ -115,6 +115,7 @@ interface AudioPlayerActions {
 export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerActions {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const decodedUrlRef = useRef<string | null>(null)
+    const softwareDecodeRef = useRef(false)
     const decodeRequestRef = useRef(0)
     const isPlayingRef = useRef(false)
     const trackByIdRef = useRef<Map<string, Track>>(new Map(tracks.map(t => [t.id, t])))
@@ -204,6 +205,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
     currentQueueIndexRef.current = queueIndex
     setCurrentQueueIndex(queueIndex)
     setPlaybackError(null)
+    softwareDecodeRef.current = requiresSoftwareDecoder(track)
 
     setCurrentTime(0)
     setDuration(0)
@@ -265,7 +267,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
 
             // Surface decode/playback failures instead of failing silently.
             const onError = () => {
-                if (!audio.src) return
+                if (!audio.src || softwareDecodeRef.current) return
                 audio.pause()
                 setIsPlaying(false)
                 isPlayingRef.current = false
@@ -382,6 +384,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                 }
                 audioRef.current = null
                 audioElementRef.current = null
+                softwareDecodeRef.current = false
                 audio.removeEventListener('waiting', onWaiting)
                 audio.removeEventListener('stalled', onStalled)
                 audio.removeEventListener('suspend', onSuspend)
