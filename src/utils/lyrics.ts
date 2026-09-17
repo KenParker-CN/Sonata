@@ -18,7 +18,7 @@ interface TimestampMatch {
   kind: '[' | '<'
 }
 
-const timestampPattern = /(\[|<|\()(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?(\]|>|\))/g
+const timestampPattern = /(\[|<)(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?(?:\]|>)/g
 
 function timestampToSeconds(minutes: string, seconds: string, fraction = ''): number {
   const fractionalSeconds = fraction.length === 1
@@ -30,7 +30,6 @@ function timestampToSeconds(minutes: string, seconds: string, fraction = ''): nu
 }
 
 function matchesForLine(raw: string): { matches: TimestampMatch[]; text: string } {
-  timestampPattern.lastIndex = 0
   const matches: TimestampMatch[] = []
   let match: RegExpExecArray | null
   while ((match = timestampPattern.exec(raw)) !== null) {
@@ -38,7 +37,7 @@ function matchesForLine(raw: string): { matches: TimestampMatch[]; text: string 
       start: match.index,
       end: timestampPattern.lastIndex,
       time: timestampToSeconds(match[2], match[3], match[4]),
-      kind: match[1] === '<' ? '<' : '[',
+      kind: match[1] as '[' | '<',
     })
   }
   timestampPattern.lastIndex = 0
@@ -49,103 +48,54 @@ export function parseLyrics(raw: string | null | undefined): LyricLine[] {
   if (!raw?.trim()) return []
 
   const lines: LyricLine[] = []
-  let lastStart = 0
-  let pendingText = ''
-
   for (const rawLine of raw.split(/\r?\n/)) {
     const { matches, text: source } = matchesForLine(rawLine)
-    if (matches.length === 0) {
-      // Unsynced line: append to the pending buffer. If we already have
-      // parsed lines, this line will be attached to the last known timestamp
-      // when the next synced line arrives (or at the end).
-      if (rawLine.trim().length > 0) {
-        pendingText += (pendingText.length > 0 ? '\n' : '') + rawLine
-      }
-      continue
-    }
-
-    // Flush any pending unsynced text as its own line, anchored at the
-    // last known timestamp (or 0 if nothing parsed yet).
-    if (pendingText.length > 0) {
-      lines.push({
-        start: lastStart,
-        end: null,
-        text: pendingText.trim(),
-        words: [{ text: pendingText.trim(), start: lastStart, end: null }],
-      })
-      pendingText = ''
-    }
-
-    lastStart = matches[0].time
+    if (matches.length === 0) continue
 
     const wordMatches = matches.filter(match => match.kind === '<')
     if (wordMatches.length > 0) {
-      const lineTimestampEnd = Math.max(
-        0,
-        ...matches.filter(match => match.kind === '[').map(match => match.end),
-      )
-      const prefix = source.slice(lineTimestampEnd, wordMatches[0].start)
-      const words = [
-        ...(prefix.trim()
-          ? [{text: prefix, start: matches[0].time, end: wordMatches[0].time}]
-          : []),
-        ...wordMatches.map((marker, index) => ({
-          text: source.slice(marker.end, wordMatches[index + 1]?.start ?? source.length),
+      const words = wordMatches
+        .map((marker, index) => ({
+          text: source.slice(marker.end, wordMatches[index + 1]?.start ?? source.length).trim(),
           start: marker.time,
           end: wordMatches[index + 1]?.time ?? null,
-        })),
-      ].filter(word => word.text.trim().length > 0)
+        }))
+        .filter(word => word.text.length > 0)
       if (words.length > 0) {
         lines.push({
           start: words[0].start,
           end: words[words.length - 1].end,
-          text: words.map(word => word.text).join('').trim(),
+          text: words.map(word => word.text).join(' '),
           words,
         })
       }
       continue
     }
 
-    const segments = matches.map((marker, index) => {
-      const nextStart = matches[index + 1]?.start ?? source.length
-      // When two timestamps are back-to-back with no gap, the text between
-      // them is the word that belongs to the earlier timestamp.  Make sure
-      // we always capture it, even when nextStart equals marker.end.
-      const raw = source.slice(marker.end, nextStart)
-      return {
+    for (let index = 0; index < matches.length; index += 1) {
+      const marker = matches[index]
+      const next = matches[index + 1]
+      const text = source.slice(marker.end, next?.start ?? source.length).trim()
+      if (!text) continue
+      lines.push({
         start: marker.time,
-        end: matches[index + 1]?.time ?? null,
-        raw,
-      }
-    })
-    const words = segments
-      .filter(segment => segment.raw.trim().length > 0)
-      .map(segment => ({ text: segment.raw, start: segment.start, end: segment.end }))
-    if (words.length === 0) continue
-    if (words.length === 1) {
-      // A lone text run spans the whole line, however many stamps repeat it.
-      words[0].start = segments[0].start
-      words[0].end = segments[segments.length - 1].end
+        end: next?.time ?? null,
+        text,
+        words: [{ text, start: marker.time, end: next?.time ?? null }],
+      })
     }
-    lines.push({
-      start: segments[0].start,
-      end: segments[segments.length - 1].end,
-      text: words.map(word => word.text).join('').trim(),
-      words,
-    })
-  }
-
-  // Flush any remaining pending unsynced text at the end of the song.
-  if (pendingText.length > 0) {
-    lines.push({
-      start: lastStart,
-      end: null,
-      text: pendingText.trim(),
-      words: [{ text: pendingText.trim(), start: lastStart, end: null }],
-    })
   }
 
   return lines.sort((a, b) => a.start - b.start)
+}
+
+export function activeLyricIndex(lines: LyricLine[], currentTime: number): number {
+  let active = -1
+  for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index].start <= currentTime) active = index
+    else break
+  }
+  return active
 }
 
 export function activeWordIndex(words: LyricWord[], currentTime: number): number {
