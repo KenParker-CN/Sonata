@@ -1,7 +1,6 @@
 import { parseArtists } from '@/utils/parseArtists'
 import { hasArtist } from '@/utils/groupArtists'
 import { groupAlbums } from '@/utils/groupAlbums'
-import { compareNames } from '@/utils/collate'
 import { Users } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { useMemo } from 'react'
@@ -10,7 +9,6 @@ import ArtPicker from '@/components/media/ArtPicker'
 import BackLink from '@/components/navigation/BackLink'
 import NotFoundState from '@/components/feedback/NotFoundState'
 import Shelf from '@/components/data/Shelf'
-import TrackLockup from '@/components/data/TrackLockup'
 import { artistArtId } from '@/services/customArt'
 import { useApp } from '@/contexts/app'
 import WikiShortIntro from '@/components/data/WikiShortIntro'
@@ -18,13 +16,6 @@ import WikiShortIntro from '@/components/data/WikiShortIntro'
 export default function ArtistDetailPage() {
   const {
     tracks,
-    playlists,
-    currentTrackId,
-    playFromContext,
-    playTrackNext,
-    addTrackToQueue,
-    addTrackToPlaylist,
-    removeFromLibrary,
   } = useApp()
   const { artistName } = useParams<{ artistName: string }>()
 
@@ -35,15 +26,6 @@ export default function ArtistDetailPage() {
   const artistTracks = useMemo(() => {
     return tracks.filter(track => hasArtist(track, decodedArtistName))
   }, [tracks, decodedArtistName])
-
-  // The playback context for this page: the artist's tracks in library order.
-  const artistTrackIds = useMemo(() => artistTracks.map(t => t.id), [artistTracks])
-
-  // Popular Tracks: stable selection sorted alphabetically, take first 12
-  const popularTracks = useMemo(() => {
-    const sorted = [...artistTracks].sort((a, b) => compareNames(a.title, b.title))
-    return sorted.slice(0, 12)
-  }, [artistTracks])
 
   // Albums: where artist is in the albumArtist (parsed with parseArtists)
   const albums = useMemo(() => {
@@ -97,47 +79,6 @@ export default function ArtistDetailPage() {
 
       {/* Content Sections */}
       <div className="space-y-12">
-        {/* Popular Tracks Section */}
-        {popularTracks.length > 0 && (
-          <section>
-            <div className="overflow-hidden mb-4">
-              <h2 
-                className="text-lg font-semibold tracking-tight whitespace-nowrap hover:animate-marquee cursor-default inline-block"
-                style={{ maxWidth: '100%' }}
-              >
-                Popular Tracks
-              </h2>
-            </div>
-            <Shelf>
-              <div className="flex gap-3 pb-2 px-1">
-                {/* Group tracks into columns of 3 rows each */}
-                {Array.from({ length: Math.ceil(popularTracks.length / 3) }).map((_, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-1 shrink-0 snap-start">
-                    {popularTracks.slice(colIndex * 3, colIndex * 3 + 3).map(track => (
-                      <TrackLockup
-                        key={track.id}
-                        track={track}
-                        isActive={track.id === currentTrackId}
-                        playlists={playlists}
-                        onClick={() => playFromContext(
-                          artistTrackIds,
-                          artistTracks.findIndex(t => t.id === track.id),
-                        )}
-                        onPlayNext={playTrackNext}
-                        onAddToQueue={addTrackToQueue}
-                        onAddToPlaylist={addTrackToPlaylist}
-                        links={{ album: true, composer: true }}
-                        onRemoveFromLibrary={removeFromLibrary}
-                        showQualityBadge={false}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </Shelf>
-          </section>
-        )}
-
         {/* Albums Section */}
         {albums.length > 0 && (
           <section>
