@@ -130,20 +130,78 @@ function getAudioGraph(audioElement: HTMLAudioElement): AudioGraph | null {
     }
 }
 
+type FrequencyBand = 'Bass' | 'Mid' | 'High'
+
+function BandVisualizer({band, startRatio, endRatio, color, analyser, isPlayingRef}: {
+    band: FrequencyBand
+    startRatio: number
+    endRatio: number
+    color: string
+    analyser: AnalyserNode
+    isPlayingRef: RefObject<boolean>
+}) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+
+    useEffect(() => {
+        const canvas = canvasRef.current
+        const canvasContext = canvas?.getContext('2d')
+        if (!canvas || !canvasContext) return
+        const values = new Uint8Array(analyser.frequencyBinCount)
+        let frame = 0
+
+        const render = () => {
+            const width = canvas.clientWidth
+            const height = canvas.clientHeight
+            const ratio = window.devicePixelRatio || 1
+            if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
+                canvas.width = width * ratio
+                canvas.height = height * ratio
+                canvasContext.setTransform(ratio, 0, 0, ratio, 0, 0)
+            }
+            analyser.getByteFrequencyData(values)
+            canvasContext.clearRect(0, 0, width, height)
+            const start = Math.floor(values.length * startRatio)
+            const end = Math.max(start + 1, Math.floor(values.length * endRatio))
+            const bandValues = values.slice(start, end)
+            const barWidth = width / bandValues.length
+            canvasContext.fillStyle = color
+            bandValues.forEach((value, index) => {
+                const level = isPlayingRef.current ? value / 255 : 0.035
+                const barHeight = Math.max(3, level * height * 0.82)
+                canvasContext.beginPath()
+                canvasContext.roundRect(index * barWidth + 1, height - barHeight, Math.max(1, barWidth - 2), barHeight, 3)
+                canvasContext.fill()
+            })
+            frame = requestAnimationFrame(render)
+        }
+
+        render()
+        return () => cancelAnimationFrame(frame)
+    }, [analyser, startRatio, endRatio, color, isPlayingRef])
+
+    return (
+        <div className="frequency-band rounded-xl border border-player-border/50 bg-player/20 p-3">
+            <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-player-foreground">{band}</span>
+                <span className="text-[10px] text-player-muted">FFT</span>
+            </div>
+            <canvas ref={canvasRef} className="h-24 w-full" aria-label={`${band} frequency visualizer`} />
+        </div>
+    )
+}
+
 function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | null; isPlaying: boolean; audioElementRef: RefObject<HTMLAudioElement | null> }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const isPlayingRef = useRef(isPlaying)
     const artworkStyle = track?.cover ? ({'--visualizer-image': `url(${track.cover})`} as CSSProperties) : undefined
+    const graph = audioElementRef.current ? getAudioGraph(audioElementRef.current) : null
 
     useEffect(() => {
         isPlayingRef.current = isPlaying
     }, [isPlaying])
 
     useEffect(() => {
-        const audioElement = audioElementRef.current
-        if (!audioElement || !canvasRef.current) return
-        const graph = getAudioGraph(audioElement)
-        if (!graph) return
+        if (!graph || !canvasRef.current) return
         const {context, analyser} = graph
         const canvas = canvasRef.current
         const canvasContext = canvas.getContext('2d')
@@ -183,7 +241,7 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
         return () => {
             cancelAnimationFrame(frame)
         }
-    }, [audioElementRef])
+    }, [audioElementRef, graph])
 
     return (
         <section className={cn('ambient-visualizer relative flex min-h-70 flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-6', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
@@ -191,10 +249,18 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
             <div className="ambient-visualizer-blob ambient-visualizer-blob-one" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-two" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-three" aria-hidden="true" />
-            <canvas ref={canvasRef} className="relative z-10 h-40 w-full" aria-hidden="true" />
-            <div className="relative z-10">
+            <div className="relative z-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {graph && (
+                    <>
+                        <BandVisualizer band="Bass" startRatio={0} endRatio={0.25} color="rgba(249, 115, 178, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
+                        <BandVisualizer band="Mid" startRatio={0.25} endRatio={0.6} color="rgba(167, 139, 250, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
+                        <BandVisualizer band="High" startRatio={0.6} endRatio={1} color="rgba(103, 232, 249, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
+                    </>
+                )}
+            </div>
+            <div className="relative z-10 mt-4">
                 <p className="section-kicker text-player-accent">Visualizer</p>
-                <p className="mt-2 text-sm text-player-muted">Audio response · no lyrics available</p>
+                <p className="mt-2 text-sm text-player-muted">Bass · Mid · High frequency response</p>
             </div>
         </section>
     )
