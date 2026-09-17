@@ -115,7 +115,7 @@ function getAudioGraph(audioElement: HTMLAudioElement): AudioGraph | null {
     }
 }
 
-type FrequencyBand = 'Bass' | 'Mid' | 'High'
+type FrequencyBand = 'Visualizer'
 
 function BandVisualizer({band, startRatio, endRatio, color, analyser, isPlayingRef}: {
     band: FrequencyBand
@@ -200,18 +200,12 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
             <div className="ambient-visualizer-blob ambient-visualizer-blob-one" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-two" aria-hidden="true" />
             <div className="ambient-visualizer-blob ambient-visualizer-blob-three" aria-hidden="true" />
-            <div className="relative z-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {graph && (
-                    <>
-                        <BandVisualizer band="Bass" startRatio={0} endRatio={0.25} color="rgba(249, 115, 178, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
-                        <BandVisualizer band="Mid" startRatio={0.25} endRatio={0.6} color="rgba(167, 139, 250, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
-                        <BandVisualizer band="High" startRatio={0.6} endRatio={1} color="rgba(103, 232, 249, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
-                    </>
+            <div className="relative z-10">
+                {graph ? (
+                    <BandVisualizer band="Visualizer" startRatio={0} endRatio={1} color="rgba(249, 115, 178, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
+                ) : (
+                    <div className="frequency-band h-32 rounded-xl border border-player-border/50 bg-player/20" />
                 )}
-            </div>
-            <div className="relative z-10 mt-4">
-                <p className="section-kicker text-player-accent">Visualizer</p>
-                <p className="mt-2 text-sm text-player-muted">Bass · Mid · High frequency response</p>
             </div>
         </section>
     )
@@ -241,19 +235,17 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onClo
                 <span className="now-playing-fluid-orb now-playing-fluid-orb-three" />
             </div>
             <div className="relative mx-auto flex min-h-full w-full max-w-7xl flex-1 flex-col px-5 pb-8 pt-5">
-                <div className="flex min-h-0 flex-1 gap-10">
-                    {/* Left column: cover on top, info anchored to the bottom zone */}
-                    <div className="flex flex-col min-w-0 flex-1 max-w-2xl">
+                <div className="flex min-h-0 flex-1 flex-col gap-8 lg:flex-row lg:gap-10">
+                    {/* Left column: cover and one full-spectrum visualizer */}
+                    <div className="flex min-w-0 flex-1 max-w-2xl flex-col gap-6">
                         <ArtworkDisplay track={track} className="w-[min(72vw,380px)] mx-auto"/>
-                        <div className="mt-auto flex w-full flex-col">
-                            <TrackInfo track={track} onNavigate={onClose}/>
-                            <MetadataPanel track={track}/>
-                        </div>
+                        <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
                     </div>
 
-                    {/* Right column: audio visualizer */}
-                    <aside className="flex min-w-0 shrink-0 flex-col w-140 h-full">
-                        <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
+                    {/* Right column: track details and metadata */}
+                    <aside className="flex min-w-0 w-full shrink-0 flex-col justify-center lg:h-full lg:w-140">
+                        <TrackInfo track={track} onNavigate={onClose}/>
+                        <MetadataPanel track={track}/>
                     </aside>
                 </div>
             </div>
