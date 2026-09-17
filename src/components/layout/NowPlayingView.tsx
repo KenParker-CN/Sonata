@@ -165,7 +165,7 @@ function BandVisualizer({band, startRatio, endRatio, color, analyser, isPlayingR
     }, [analyser, startRatio, endRatio, color, isPlayingRef])
 
     return (
-        <div className="frequency-band rounded-xl border border-player-border/50 bg-player/20 p-3">
+        <div className="frequency-band">
             <div className="mb-2 flex items-center justify-between">
                 <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-player-foreground">{band}</span>
                 <span className="text-[10px] text-player-muted">FFT</span>
