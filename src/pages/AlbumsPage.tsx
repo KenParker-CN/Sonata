@@ -73,7 +73,7 @@ function earliestReleaseDate(tracks: Track[], indices: number[]): string | null 
 
 export default function AlbumsPage() {
   const { tracks } = useApp()
-  const sort = useSort('albums', ALBUM_SORT_OPTIONS, 'name')
+  const sort = useSort('albums', ALBUM_SORT_OPTIONS, 'date')
   const [view, setView] = useViewMode('albums')
 
   const { albums, recentlyAdded } = useMemo(() => {
