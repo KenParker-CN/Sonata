@@ -149,7 +149,8 @@ function BandVisualizer({band, startRatio, endRatio, color, analyser, isPlayingR
             const end = Math.max(start + 1, Math.floor(values.length * endRatio))
             const bandValues = values.slice(start, end)
             const barWidth = width / bandValues.length
-            canvasContext.fillStyle = color
+            const accentColor = getComputedStyle(canvas).getPropertyValue('--player-accent').trim() || color
+            canvasContext.fillStyle = accentColor
             bandValues.forEach((value, index) => {
                 const level = isPlayingRef.current ? value / 255 : 0.035
                 const barHeight = Math.max(3, level * height * 0.82)
