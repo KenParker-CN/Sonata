@@ -1,7 +1,7 @@
 import { groupAlbums } from '@/utils/groupAlbums'
 import { hasComposer } from '@/utils/groupComposers'
 import { byDiscAndTrack, compareNames } from '@/utils/collate'
-import { formatTime, formatDurationLong } from '@/utils/formatTime'
+import { formatTime } from '@/utils/formatTime'
 import { albumPath } from '@/utils/routes'
 import { PenLine } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -55,8 +55,7 @@ export default function ComposerDetailPage() {
 
   // Per-work counts and lengths, plus the header total. `trackIndices` are
   // positions in composerTracks, which groupAlbums was called with.
-  const { works, totalDuration } = useMemo(() => ({
-    totalDuration: composerTracks.reduce((sum, t) => sum + t.duration, 0),
+  const { works } = useMemo(() => ({
     works: albums.map(album => ({
       album,
       trackCount: album.trackIndices.length,
@@ -121,11 +120,6 @@ export default function ComposerDetailPage() {
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight truncate">
                 {decodedComposerName}
               </h1>
-              <p className="text-sm text-muted-foreground mt-2">
-                {albums.length} {albums.length === 1 ? 'work' : 'works'} ·{' '}
-                {composerTracks.length} {composerTracks.length === 1 ? 'recording' : 'recordings'} ·{' '}
-                {formatDurationLong(totalDuration)}
-              </p>
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">
