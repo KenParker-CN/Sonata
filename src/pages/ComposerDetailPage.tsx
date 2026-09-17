@@ -105,13 +105,13 @@ export default function ComposerDetailPage() {
       {/* Compact header  — the name is the identity; the avatar is a portrait once uploaded */}
       <div className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
-          <div className="flex min-w-0 items-end gap-4">
+          <div className="flex min-w-0 items-start gap-4">
             <ArtPicker
               name={decodedComposerName}
               upload={{ artId: composerArtId(decodedComposerName), noun: 'composer portrait' }}
               className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-full mx-0"
             />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight truncate">
                 {decodedComposerName}
               </h1>
@@ -120,6 +120,9 @@ export default function ComposerDetailPage() {
                 {composerTracks.length} {composerTracks.length === 1 ? 'track' : 'tracks'} ·{' '}
                 {formatDurationLong(totalDuration)}
               </p>
+              <div className="mt-4 max-w-3xl">
+                <WikiShortIntro name={decodedComposerName} subject="composer" />
+              </div>
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">
@@ -132,8 +135,6 @@ export default function ComposerDetailPage() {
           </div>
         </div>
       </div>
-
-      <WikiShortIntro name={decodedComposerName} subject="composer" />
 
       {search.active && visibleWorks.length === 0 && visibleTracks.length === 0 && (
         <SearchEmptyState query={search.query} onClear={() => search.setQuery('')} />

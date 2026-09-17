@@ -88,17 +88,18 @@ export default function ArtistDetailPage() {
         />
 
         {/* Artist info */}
-        <div className="flex flex-col justify-between h-auto sm:h-48 text-center sm:text-left">
+        <div className="flex min-w-0 flex-1 flex-col text-center sm:text-left">
           <div className="space-y-2">
             <h1 className="text-xl sm:text-3xl font-bold tracking-tight">{decodedArtistName}</h1>
+          </div>
+          <div className="mt-4 max-w-3xl">
+            <WikiShortIntro name={decodedArtistName} subject="artist" />
           </div>
         </div>
       </div>
 
-      <WikiShortIntro name={decodedArtistName} subject="artist" />
-
       {/* Content Sections */}
-      <div className="mt-8 space-y-12">
+      <div className="space-y-12">
         {/* Popular Tracks Section */}
         {popularTracks.length > 0 && (
           <section>
