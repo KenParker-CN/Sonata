@@ -57,18 +57,12 @@ export default function WikiShortIntro({ name, subject }: WikiShortIntroProps) {
 
   return (
     <>
-      <section
-        className="h-36 cursor-pointer overflow-hidden rounded-2xl border border-border/70 bg-card/60 p-5 shadow-sm transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
+        className="relative h-36 w-full cursor-pointer overflow-hidden rounded-2xl border border-border/70 bg-card/60 p-5 text-left shadow-sm transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`Open full introduction for ${name}`}
+        aria-haspopup="dialog"
         onClick={() => setDialogOpen(true)}
-        onKeyDown={event => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            setDialogOpen(true)
-          }
-        }}
       >
         <div className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <BookOpen size={16} className="text-primary" aria-hidden="true" />
@@ -89,17 +83,18 @@ export default function WikiShortIntro({ name, subject }: WikiShortIntroProps) {
             )}
             <p
               className="mt-3 overflow-hidden text-sm leading-6 text-muted-foreground"
-              style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3 }}
+              style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2 }}
             >
               {extract}
             </p>
+            <span className="absolute bottom-4 left-5 text-xs font-medium text-primary">Read full introduction…</span>
           </>
         ) : (
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
             No short introduction is available for this {subject}.
           </p>
         )}
-      </section>
+      </button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
