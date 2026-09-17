@@ -13,6 +13,7 @@ import Shelf from '@/components/data/Shelf'
 import TrackLockup from '@/components/data/TrackLockup'
 import { artistArtId } from '@/services/customArt'
 import { useApp } from '@/contexts/app'
+import WikiShortIntro from '@/components/data/WikiShortIntro'
 
 export default function ArtistDetailPage() {
   const {
@@ -94,8 +95,10 @@ export default function ArtistDetailPage() {
         </div>
       </div>
 
+      <WikiShortIntro name={decodedArtistName} subject="artist" />
+
       {/* Content Sections */}
-      <div className="space-y-12">
+      <div className="mt-8 space-y-12">
         {/* Popular Tracks Section */}
         {popularTracks.length > 0 && (
           <section>
@@ -176,4 +179,3 @@ export default function ArtistDetailPage() {
     </div>
   )
 }
-

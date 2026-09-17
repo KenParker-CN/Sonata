@@ -20,6 +20,7 @@ import { composerArtId } from '@/services/customArt'
 import { matchesSearch } from '@/utils/search'
 import { useSearch } from '@/hooks/useSearch'
 import { useApp } from '@/contexts/app'
+import WikiShortIntro from '@/components/data/WikiShortIntro'
 
 export default function ComposerDetailPage() {
   const {
@@ -132,6 +133,8 @@ export default function ComposerDetailPage() {
         </div>
       </div>
 
+      <WikiShortIntro name={decodedComposerName} subject="composer" />
+
       {search.active && visibleWorks.length === 0 && visibleTracks.length === 0 && (
         <SearchEmptyState query={search.query} onClear={() => search.setQuery('')} />
       )}
@@ -207,4 +210,3 @@ export default function ComposerDetailPage() {
     </div>
   )
 }
-
