@@ -9,11 +9,13 @@ import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
 import {BackgroundRender} from '@applemusic-like-lyrics/react'
+import LyricsPanel from '@/components/layout/LyricsPanel'
 
 interface NowPlayingViewProps {
     track: Track | null
     isPlaying: boolean
     audioElementRef: RefObject<HTMLAudioElement | null>
+    onSeek: (time: number) => void
     onClose: () => void
 }
 
@@ -336,7 +338,7 @@ function BackgroundSettingsPanel({settings, onChange, onClose}: {
     )
 }
 
-export default function NowPlayingView({track, isPlaying, audioElementRef, onClose}: NowPlayingViewProps) {
+export default function NowPlayingView({track, isPlaying, audioElementRef, onSeek, onClose}: NowPlayingViewProps) {
     const [showSettings, setShowSettings] = useState(false)
     const [bgSettings, setBgSettings] = useState<BackgroundSettings>({
         fps: 30,
@@ -409,6 +411,7 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onClo
                     {/* Right column: visualizer and metadata sections */}
                     <aside className="float-right flex min-w-0 w-full shrink-0 flex-col gap-6 lg:max-w-md">
                         <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
+                        <LyricsPanel track={track} audioElementRef={audioElementRef} onSeek={onSeek}/>
                         <div className="space-y-6">
                             <MetadataSection track={track}/>
                             <PersonnelSection track={track}/>

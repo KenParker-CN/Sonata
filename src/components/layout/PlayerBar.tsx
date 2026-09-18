@@ -184,6 +184,7 @@ export default function PlayerBar({
                         track={track}
                         isPlaying={isPlaying}
                         audioElementRef={audioElementRef}
+                        onSeek={onSeek}
                         onClose={() => setNowPlayingOpen(false)}
                     />
                 )}
