@@ -1,5 +1,5 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import type {RefObject} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import type {QueueItem, RepeatMode, Track} from '../types/music'
 
 let queueItemSeq = 0
@@ -10,11 +10,6 @@ function requiresSoftwareDecoder(track: Track): boolean {
 
 const FADE_IN_MS = 280
 const FADE_OUT_MS = 180
-
-function replayGainMultiplier(track: Track): number {
-    const gainDb = track.replayGainTrack ?? track.replayGainAlbum ?? 0
-    return Math.pow(10, gainDb / 20)
-}
 
 function createFloatWavUrl(channelData: Float32Array[], sampleRate: number): string {
     const channels = channelData.length
@@ -71,7 +66,7 @@ function shuffled<T>(input: readonly T[]): T[] {
 }
 
 interface AudioPlayerState {
-    /** Id of the track in the playing queue slot, or null when nothing is queued. */
+    /** ID of the track in the playing queue slot, or null when nothing is queued. */
     currentTrackId: string | null
     /** Full playback queue — the single source of truth for playback order. */
     queue: QueueItem[]
@@ -128,7 +123,6 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
     const fadeFrameRef = useRef<number | null>(null)
     const fadeTokenRef = useRef(0)
     const userVolumeRef = useRef(1)
-    const replayGainRef = useRef(1)
     const isPlayingRef = useRef(false)
     const trackByIdRef = useRef<Map<string, Track>>(new Map(tracks.map(t => [t.id, t])))
 
@@ -154,8 +148,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
     const [playbackError, setPlaybackError] = useState<string | null>(null)
     const audioElementRef = useRef<HTMLAudioElement | null>(null)
 
-    const targetVolume = useCallback(() =>
-        Math.min(1, userVolumeRef.current * replayGainRef.current), [])
+    const targetVolume = useCallback(() => Math.min(1, Math.max(0, userVolumeRef.current)), [])
 
     const cancelFade = useCallback(() => {
         fadeTokenRef.current += 1
@@ -174,7 +167,8 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
         const tick = (now: number) => {
             if (token !== fadeTokenRef.current) return
             const progress = Math.min(1, (now - startedAt) / duration)
-            audio.volume = start + (target - start) * progress
+            // `volume` throws IndexSizeError outside [0, 1]; keep the lerp honest.
+            audio.volume = Math.min(1, Math.max(0, start + (target - start) * progress))
             if (progress >= 1) {
                 fadeFrameRef.current = null
                 onDone?.()
@@ -263,7 +257,6 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
 
     setCurrentTime(0)
     setDuration(0)
-    replayGainRef.current = replayGainMultiplier(track)
     decodeRequestRef.current += 1
     const requestId = decodeRequestRef.current
 
@@ -564,8 +557,9 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
 
         const setVolume = useCallback((vol: number) => {
             const audio = audioRef.current
-            userVolumeRef.current = vol
-            setVolumeState(vol)
+            const clamped = Math.min(1, Math.max(0, vol))
+            userVolumeRef.current = clamped
+            setVolumeState(clamped)
             if (!audio || fadeFrameRef.current !== null) return
             audio.volume = targetVolume()
         }, [targetVolume])

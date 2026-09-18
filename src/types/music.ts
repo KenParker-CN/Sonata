@@ -21,8 +21,12 @@ export interface Track {
   bitrate?: number | null
   codec?: string | null
   lossless?: boolean | null
-  replayGainTrack?: number | null
-  replayGainAlbum?: number | null
+    /**
+     * Lyrics as the tag wrote them — plain text, LyRiC (line and/or word stamps),
+     * TTML or a karaoke format. Kept verbatim; `parseLyrics()` picks the parser.
+     * SYLT frames are written out as enhanced LyRiC when the track is imported.
+     */
+    lyrics?: string | null
 }
 
 export interface Playlist {

@@ -1,8 +1,8 @@
-import { hasComposer } from '@/utils/groupComposers'
-import { byDiscAndTrack, compareNames } from '@/utils/collate'
-import { PenLine } from 'lucide-react'
-import { useParams } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import {hasComposer} from '@/utils/groupComposers'
+import {byDiscAndTrack, compareNames} from '@/utils/collate'
+import {PenLine} from 'lucide-react'
+import {useParams} from 'react-router-dom'
+import {useMemo, useState} from 'react'
 import ArtPicker from '@/components/media/ArtPicker'
 import BackLink from '@/components/navigation/BackLink'
 import NotFoundState from '@/components/feedback/NotFoundState'
@@ -10,10 +10,10 @@ import PlayButton from '@/components/media/PlayButton'
 import SearchInput from '@/components/navigation/SearchInput'
 import SearchEmptyState from '@/components/feedback/SearchEmptyState'
 import TrackList from '@/components/data/TrackList'
-import { composerArtId } from '@/services/customArt'
-import { matchesSearch } from '@/utils/search'
-import { useSearch } from '@/hooks/useSearch'
-import { useApp } from '@/contexts/app'
+import {composerArtId} from '@/services/customArt'
+import {matchesSearch} from '@/utils/search'
+import {useSearch} from '@/hooks/useSearch'
+import {useApp} from '@/contexts/app'
 import WikiShortIntro from '@/components/data/WikiShortIntro'
 
 export default function ComposerDetailPage() {
@@ -57,7 +57,7 @@ export default function ComposerDetailPage() {
       ),
   [orderedTracks, search.terms])
   const visibleTrackIds = useMemo(() => visibleTracks.map(t => t.id), [visibleTracks])
-  const recordingsPerPage = 20
+    const recordingsPerPage = 10
   const recordingsPageCount = Math.max(1, Math.ceil(visibleTracks.length / recordingsPerPage))
   const [recordingsPage, setRecordingsPage] = useState(1)
   const currentRecordingsPage = Math.min(recordingsPage, recordingsPageCount)
@@ -95,7 +95,7 @@ export default function ComposerDetailPage() {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">
-            <SearchInput label="Search works and recordings" value={search.query} onChange={search.setQuery} />
+              <SearchInput label="Search recordings" value={search.query} onChange={search.setQuery}/>
             <PlayButton
               onClick={() => playComposer(decodedComposerName)}
               label={`Play recordings by ${decodedComposerName}`}

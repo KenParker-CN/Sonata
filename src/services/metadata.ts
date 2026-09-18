@@ -1,6 +1,7 @@
-import { parseBlob } from 'music-metadata'
-import type { Track } from '../types/music'
-import { makeFileKey, trackIdFor } from '../utils/getFileKey'
+import type {ILyricsTag} from 'music-metadata'
+import {parseBlob} from 'music-metadata'
+import type {Track} from '../types/music'
+import {makeFileKey, trackIdFor} from '../utils/getFileKey'
 
 // `path` is the track's location relative to the folder the user picked, which
 // is what persistence later re-matches the cached metadata against.
