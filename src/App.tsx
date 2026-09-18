@@ -4,7 +4,9 @@ import {revokeTrackUrls} from '@/services/metadata'
 import {
     collectAudioEntries,
     isAudioFileName,
+    isLyricsFileName,
     isPersistenceSupported,
+    matchLyricsPath,
     pickMusicDirectory,
 } from '@/services/musicFolders'
 import {buildLibrary, type RestoredLibrary} from '@/services/restoreLibrary'
@@ -259,9 +261,23 @@ function App() {
     }, [playlists])
 
     const handleFilesSelected = useCallback(async (files: File[]) => {
+        const lyricsByPath = new Map(
+            files
+                .filter(file => isLyricsFileName(file.name))
+                .map(file => [getFilePath(file), file] as const),
+        )
         const entries = files
             .filter(file => file.type.startsWith('audio/') || isAudioFileName(file.name))
-            .map(file => ({path: getFilePath(file), getFile: async () => file}))
+            .map(file => {
+                const path = getFilePath(file)
+                const lyricsPath = matchLyricsPath(path, lyricsByPath.keys())
+                const lyricsFile = lyricsPath ? lyricsByPath.get(lyricsPath) : undefined
+                return {
+                    path,
+                    getFile: async () => file,
+                    getLyricsFile: lyricsFile ? async () => lyricsFile : undefined,
+                }
+            })
         await importEntries(entries, null)
     }, [importEntries])
 
@@ -274,7 +290,11 @@ function App() {
         if (!root) return
         const entries = await collectAudioEntries(root)
         await importEntries(
-            entries.map(entry => ({path: entry.path, getFile: () => entry.handle.getFile()})),
+            entries.map(entry => ({
+                path: entry.path,
+                getFile: () => entry.handle.getFile(),
+                getLyricsFile: entry.lyricsHandle ? () => entry.lyricsHandle!.getFile() : undefined,
+            })),
             {id: root.name, handle: root},
         )
     }, [importEntries])
@@ -623,7 +643,7 @@ function App() {
                 <input
                     ref={importInputRef}
                     type="file"
-                    accept="audio/*,.mp3,.m4a,.m4b,.aac,.flac,.wav,.ogg,.oga,.opus,.weba,.aif,.aiff,.alac,.wma"
+                    accept="audio/*,.lrc,.mp3,.m4a,.m4b,.aac,.flac,.wav,.ogg,.oga,.opus,.weba,.aif,.aiff,.alac,.wma"
                     multiple
                     onChange={handleImportInputChange}
                     className="hidden"

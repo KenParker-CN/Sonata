@@ -1,14 +1,36 @@
 export interface AudioEntry {
   path: string
   handle: FileSystemFileHandle
+  lyricsHandle?: FileSystemFileHandle
 }
 
 // Some environments report an empty MIME type for files like .m4a, so the
 // extension is the authority for what counts as audio here.
 const AUDIO_EXTENSIONS = /\.(mp3|m4a|m4b|aac|flac|wav|wave|ogg|oga|opus|weba|aif|aiff|alac|wma)$/i
+const LYRICS_EXTENSIONS = /\.lrc$/i
 
 export function isAudioFileName(name: string): boolean {
   return AUDIO_EXTENSIONS.test(name)
+}
+
+export function isLyricsFileName(name: string): boolean {
+  return LYRICS_EXTENSIONS.test(name)
+}
+
+/**
+ * Matches a sidecar by exact basename in the same directory. Matching is
+ * case-insensitive because folders copied between platforms may change case.
+ */
+export function lyricsSidecarKey(path: string): string {
+  return path.replace(/\.[^./]+$/, '').toLocaleLowerCase()
+}
+
+export function matchLyricsPath(audioPath: string, lyricsPaths: Iterable<string>): string | null {
+  const key = lyricsSidecarKey(audioPath)
+  for (const path of lyricsPaths) {
+    if (lyricsSidecarKey(path) === key && isLyricsFileName(path)) return path
+  }
+  return null
 }
 
 export function isPersistenceSupported(): boolean {
@@ -31,19 +53,31 @@ export async function pickMusicDirectory(): Promise<FileSystemDirectoryHandle | 
 export async function collectAudioEntries(
   root: FileSystemDirectoryHandle,
 ): Promise<AudioEntry[]> {
-  const found: AudioEntry[] = []
+  const files: Array<{ path: string; handle: FileSystemFileHandle }> = []
   const walk = async (dir: FileSystemDirectoryHandle, prefix: string): Promise<void> => {
     for await (const child of dir.values()) {
       if (child.name.startsWith('.')) continue
       if (child.kind === 'directory') {
         await walk(child, `${prefix}/${child.name}`)
-      } else if (AUDIO_EXTENSIONS.test(child.name)) {
-        found.push({ path: `${prefix}/${child.name}`, handle: child })
+      } else if (isAudioFileName(child.name) || isLyricsFileName(child.name)) {
+        files.push({ path: `${prefix}/${child.name}`, handle: child })
       }
     }
   }
   await walk(root, root.name)
-  return found
+
+  const lyricsByKey = new Map<string, { path: string; handle: FileSystemFileHandle }>()
+  for (const file of files) {
+    if (isLyricsFileName(file.path)) lyricsByKey.set(lyricsSidecarKey(file.path), file)
+  }
+
+  return files
+    .filter(file => isAudioFileName(file.path))
+    .map(file => ({
+      path: file.path,
+      handle: file.handle,
+      lyricsHandle: lyricsByKey.get(lyricsSidecarKey(file.path))?.handle,
+    }))
 }
 
 // `ask` must only be true from inside a click handler: requestPermission shows a

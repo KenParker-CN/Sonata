@@ -9,7 +9,6 @@ import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
 import {BackgroundRender} from '@applemusic-like-lyrics/react'
-import LyricsPanel from '@/components/layout/LyricsPanel'
 
 interface NowPlayingViewProps {
     track: Track | null

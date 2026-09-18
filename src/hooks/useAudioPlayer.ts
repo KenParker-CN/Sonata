@@ -317,7 +317,6 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             audioRef.current = audio
             audioElementRef.current = audio
 
-            const onTimeUpdate = () => setCurrentTime(audio.currentTime)
             const onLoadedMetadata = () => setDuration(audio.duration)
 
             // Smooth progress animation at 60fps

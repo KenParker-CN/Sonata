@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ILyricsTag } from 'music-metadata'
-import { extractLyrics, serializeLyricsTag } from '@/services/metadata'
+import { extractLyrics, preferExternalLyrics, serializeLyricsTag } from '@/services/metadata'
 import { parseLyrics } from '@/utils/lyrics'
 
 function unsyncedTag(text: string): ILyricsTag {
@@ -52,5 +52,16 @@ describe('extractLyrics', () => {
   it('drops entries that serialize to nothing', () => {
     const tags = [unsyncedTag(''), unsyncedTag('Real lyrics')]
     expect(extractLyrics(tags)).toBe('Real lyrics')
+  })
+})
+
+describe('preferExternalLyrics', () => {
+  it('uses a non-empty external LRC and removes a UTF-8 BOM', () => {
+    expect(preferExternalLyrics('embedded', '\uFEFF[00:01.00]external')).toBe('[00:01.00]external')
+  })
+
+  it('falls back to embedded lyrics for a missing or empty sidecar', () => {
+    expect(preferExternalLyrics('embedded', null)).toBe('embedded')
+    expect(preferExternalLyrics('embedded', '  \n')).toBe('embedded')
   })
 })

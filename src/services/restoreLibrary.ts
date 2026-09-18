@@ -37,6 +37,7 @@ export async function buildLibrary(askForAccess: boolean): Promise<RestoredLibra
     }
     for (const entry of await collectAudioEntries(root.handle)) {
       handlesByPath.set(entry.path, entry.handle)
+      if (entry.lyricsHandle) handlesByPath.set(`${entry.path}::lyrics`, entry.lyricsHandle)
     }
   }
 
@@ -52,7 +53,7 @@ export async function buildLibrary(askForAccess: boolean): Promise<RestoredLibra
   }
 
   const resolved = await Promise.all(
-    candidates.map(({ record, handle }) => revive(record, handle)),
+    candidates.map(({ record, handle }) => revive(record, handle, handlesByPath.get(`${record.metadata.filePath}::lyrics`))),
   )
 
   return {
@@ -73,14 +74,25 @@ function isUnderRoot(path: string, rootNames: string[]): boolean {
 async function revive(
   record: StoredTrack,
   handle: FileSystemFileHandle,
+  lyricsHandle?: FileSystemFileHandle,
 ): Promise<Track | null> {
   const file = await handle.getFile()
   if (makeFileKey(record.metadata.filePath, file.size, file.lastModified) !== record.fileKey) {
     return null
   }
+  let lyrics = record.metadata.lyrics
+  if (lyricsHandle) {
+    try {
+      const externalLyrics = await (await lyricsHandle.getFile()).text()
+      if (externalLyrics.trim()) lyrics = externalLyrics.replace(/^\uFEFF/, '')
+    } catch {
+      // A missing or unreadable sidecar should never prevent audio restoration.
+    }
+  }
   return {
     ...record.metadata,
     url: URL.createObjectURL(file),
     cover: record.cover ? URL.createObjectURL(record.cover) : null,
+    lyrics,
   }
 }

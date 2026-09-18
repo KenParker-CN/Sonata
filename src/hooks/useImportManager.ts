@@ -17,6 +17,7 @@ export interface ImportProgress {
 export interface ImportEntry {
   path: string
   getFile: () => Promise<File>
+  getLyricsFile?: () => Promise<File>
 }
 
 interface UseImportManagerResult {
@@ -96,7 +97,13 @@ export function useImportManager(onTracksParsed: (tracks: Track[]) => void): Use
         const name = entry.path.split('/').pop() ?? entry.path
 
         try {
-          const track = await parseTrackFile(await entry.getFile(), entry.path)
+          const audioFile = await entry.getFile()
+          const lyricsFile = entry.getLyricsFile ? await entry.getLyricsFile() : null
+          const track = await parseTrackFile(
+            audioFile,
+            entry.path,
+            lyricsFile ? await lyricsFile.text() : null,
+          )
           indexedResults[originalIndex] = { index: originalIndex, track }
           successCount += 1
         } catch (error) {

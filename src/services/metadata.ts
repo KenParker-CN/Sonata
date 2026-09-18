@@ -69,9 +69,13 @@ export function extractLyrics(lyricsTags: ILyricsTag[] | undefined): string | nu
   return blocks.length > 0 ? blocks.join('\n') : null
 }
 
+export function preferExternalLyrics(embeddedLyrics: string | null, externalLyrics?: string | null): string | null {
+  return externalLyrics?.trim() ? externalLyrics.replace(/^\uFEFF/, '') : embeddedLyrics
+}
+
 // `path` is the track's location relative to the folder the user picked, which
 // is what persistence later re-matches the cached metadata against.
-export async function parseTrackFile(file: File, path: string): Promise<Track> {
+export async function parseTrackFile(file: File, path: string, externalLyrics?: string | null): Promise<Track> {
   const url = URL.createObjectURL(file)
   const fileKey = makeFileKey(path, file.size, file.lastModified)
   let artist = ''
@@ -160,6 +164,11 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
   } catch {
     // Metadata parsing failed; use filename as title, albumArtist stays 'Unknown Artist'
   }
+
+  // A same-name external LRC is user-editable and therefore takes precedence
+  // over an embedded tag. Empty sidecars are ignored so embedded lyrics remain
+  // a useful fallback.
+  lyrics = preferExternalLyrics(lyrics, externalLyrics)
 
   return {
     id: trackIdFor(fileKey),
