@@ -148,15 +148,40 @@ function parseLine(raw: string): LyricLine[] {
     }))
   }
 
+  // Check for bilingual format: look for angle brackets with the same time as the line start
+  // Format: [time]<time>words<time>words...<time>translation
+  const lineStartTime = rest[0].time
+  const angleStamps = rest.filter(s => s.kind === '<')
+  
+  // Find if there's a translation (angle bracket with same time as line start, appearing after words)
+  let translation: string | null = null
+  let wordStamps = rest
+  
+  if (angleStamps.length > 0) {
+    // Find the last angle stamp that has the same time as line start
+    const translationStampIndex = angleStamps.findIndex((s, idx) => 
+      s.time === lineStartTime && idx > 0 && raw.slice(s.end).trim().length > 0
+    )
+    
+    if (translationStampIndex !== -1) {
+      const translationStamp = angleStamps[translationStampIndex]
+      translation = raw.slice(translationStamp.end).trim()
+      // Remove the translation part from the raw string for word parsing
+      raw = raw.slice(0, translationStamp.start)
+      // Re-find stamps on the trimmed string
+      wordStamps = findStamps(raw).slice(leadingRunEnd - 1)
+    }
+  }
+
   // Word/karaoke line: every remaining stamp bounds one segment. Segments are
   // NOT trimmed — see the file-level doc comment for why.
   const words: LyricWord[] = []
-  for (let i = 0; i < rest.length; i += 1) {
-    const segmentEnd = rest[i + 1]?.start ?? raw.length
+  for (let i = 0; i < wordStamps.length; i += 1) {
+    const segmentEnd = wordStamps[i + 1]?.start ?? raw.length
     words.push({
-      text: raw.slice(rest[i].end, segmentEnd),
-      start: rest[i].time,
-      end: rest[i + 1]?.time ?? null,
+      text: raw.slice(wordStamps[i].end, segmentEnd),
+      start: wordStamps[i].time,
+      end: wordStamps[i + 1]?.time ?? null,
     })
   }
   const realWords = words.filter(word => word.text.length > 0)
@@ -167,7 +192,7 @@ function parseLine(raw: string): LyricLine[] {
     start: time,
     end: null,
     text,
-    translation: null,
+    translation,
     words: realWords,
   }))
 }
@@ -190,7 +215,33 @@ export function parseLyrics(raw: string | null | undefined, durationSeconds = 0)
   const offsetMatch = text.match(OFFSET_TAG)
   const offsetSeconds = offsetMatch ? Number(offsetMatch[1]) / 1000 : 0
 
-  const rawLines = text.split(/\r?\n/).flatMap(parseLine)
+  // If there are no line breaks, split by bracket timestamps to create lines
+  let linesToParse: string[]
+  if (!text.includes('\n') && !text.includes('\r')) {
+    // Split by bracket timestamps that start a new line
+    // Look for [ followed by time digits, which indicates a new line
+    const lines: string[] = []
+    let currentLine = ''
+    let i = 0
+    while (i < text.length) {
+      if (text[i] === '[' && /\d/.test(text[i + 1] || '')) {
+        if (currentLine.trim()) {
+          lines.push(currentLine.trim())
+        }
+        currentLine = ''
+      }
+      currentLine += text[i]
+      i++
+    }
+    if (currentLine.trim()) {
+      lines.push(currentLine.trim())
+    }
+    linesToParse = lines
+  } else {
+    linesToParse = text.split(/\r?\n/)
+  }
+
+  const rawLines = linesToParse.flatMap(parseLine)
   if (rawLines.length === 0) return {lines: [], synced: false, plain: plainFallback(text)}
 
   const shifted = rawLines.map(line => ({

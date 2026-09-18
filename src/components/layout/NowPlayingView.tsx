@@ -15,7 +15,6 @@ interface NowPlayingViewProps {
     track: Track | null
     isPlaying: boolean
     audioElementRef: RefObject<HTMLAudioElement | null>
-    onSeek: (time: number) => void
     onClose: () => void
 }
 
@@ -338,7 +337,7 @@ function BackgroundSettingsPanel({settings, onChange, onClose}: {
     )
 }
 
-export default function NowPlayingView({track, isPlaying, audioElementRef, onSeek, onClose}: NowPlayingViewProps) {
+export default function NowPlayingView({track, isPlaying, audioElementRef, onClose}: NowPlayingViewProps) {
     const [showSettings, setShowSettings] = useState(false)
     const [bgSettings, setBgSettings] = useState<BackgroundSettings>({
         fps: 30,
@@ -347,6 +346,14 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onSee
         staticMode: false,
         lowFreqVolume: 1
     })
+
+    // Lock body scroll when NowPlayingView is open
+    useEffect(() => {
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [])
     return (
         <motion.section
             initial={{opacity: 0, y: 24}}
@@ -361,7 +368,7 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onSee
                 delay: 0.24,
                 ease: [0.22, 1, 0.36, 1],
             }}
-            className="absolute inset-x-0 bottom-(--player-height) top-0 z-30 flex min-h-0 flex-col overflow-y-auto bg-player text-player-foreground"
+            className="absolute inset-x-0 bottom-(--player-height) top-0 z-30 flex min-h-0 flex-col bg-player text-player-foreground"
             aria-label="Now Playing"
         >
             <div className="absolute inset-0 -z-10" aria-hidden="true">
@@ -382,7 +389,7 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onSee
                     onClose={() => setShowSettings(false)}
                 />
             )}
-            <div className="relative mx-auto flex min-h-full w-full max-w-6xl flex-1 flex-col px-5 pb-8 pt-5">
+            <div className="relative mx-auto flex h-full w-full max-w-6xl flex-1 flex-col px-5 pb-8 pt-5 overflow-hidden">
                 <div className="absolute right-4 top-4 flex gap-2">
                     <button
                         className="text-player-foreground/50 hover:text-player-foreground"
@@ -408,11 +415,11 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onSee
                         </div>
                     </div>
 
-                    {/* Right column: visualizer and metadata sections */}
-                    <aside className="float-right flex min-w-0 w-full shrink-0 flex-col gap-6 lg:max-w-md">
+                    {/* Right column: visualizer, lyrics and metadata sections */}
+                    <aside className="float-right flex min-w-0 w-full shrink-0 flex-col gap-6 lg:max-w-md min-h-0">
                         <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
-                        <LyricsPanel track={track} audioElementRef={audioElementRef} onSeek={onSeek}/>
-                        <div className="space-y-6">
+                        <LyricsPanel track={track} audioElementRef={audioElementRef}/>
+                        <div className="space-y-6 shrink-0">
                             <MetadataSection track={track}/>
                             <PersonnelSection track={track}/>
                             <CreditsSection track={track}/>

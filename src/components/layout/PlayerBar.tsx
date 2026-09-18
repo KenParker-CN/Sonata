@@ -5,7 +5,7 @@ import {ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward,
 import {cn} from '@/lib/utils'
 import {Link} from 'react-router-dom'
 import * as React from 'react'
-import {useState, useRef, useEffect} from 'react'
+import {useState, useRef, useEffect, useCallback} from 'react'
 import {AnimatePresence, motion} from 'motion/react'
 import {artistPath, trackPath} from '@/utils/routes'
 import NowPlayingView from '@/components/layout/NowPlayingView'
@@ -69,7 +69,7 @@ export default function PlayerBar({
     const [containerWidth, setContainerWidth] = useState(0)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    const updatePreview = (clientX: number) => {
+    const updatePreview = useCallback((clientX: number) => {
         if (!hasTrack || !duration || !containerRef.current) return
         const rect = containerRef.current.getBoundingClientRect()
         const x = clientX - rect.left
@@ -77,7 +77,7 @@ export default function PlayerBar({
         const time = percentage * duration
         setPreviewTime(time)
         setTooltipX(x)
-    }
+    }, [hasTrack, duration])
 
     const handleSeek = (clientX: number) => {
         updatePreview(clientX)
@@ -163,7 +163,7 @@ export default function PlayerBar({
                 window.removeEventListener('mouseup', handleGlobalMouseUp)
             }
         }
-    }, [isDragging, hasTrack, duration, onSeek, previewTime])
+    }, [isDragging, hasTrack, duration, onSeek, previewTime, updatePreview])
 
     useEffect(() => {
         const updateWidth = () => {
@@ -184,7 +184,6 @@ export default function PlayerBar({
                         track={track}
                         isPlaying={isPlaying}
                         audioElementRef={audioElementRef}
-                        onSeek={onSeek}
                         onClose={() => setNowPlayingOpen(false)}
                     />
                 )}
