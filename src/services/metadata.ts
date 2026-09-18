@@ -1,6 +1,8 @@
-import { parseBlob } from 'music-metadata'
-import type { Track } from '../types/music'
-import { makeFileKey, trackIdFor } from '../utils/getFileKey'
+import type {ILyricsTag} from 'music-metadata'
+import {parseBlob} from 'music-metadata'
+import type {Track} from '../types/music'
+import {makeFileKey, trackIdFor} from '../utils/getFileKey'
+import {serializeSyncLyrics} from '../utils/serializeSyncLyrics'
 
 // `path` is the track's location relative to the folder the user picked, which
 // is what persistence later re-matches the cached metadata against.
@@ -23,8 +25,7 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
   let bitrate: number | null = null
   let codec: string | null = null
   let lossless: boolean | null = null
-  let replayGainTrack: number | null = null
-  let replayGainAlbum: number | null = null
+  let lyrics: string | null = null
 
   try {
     const metadata = await parseBlob(file)
@@ -40,9 +41,9 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     codec = metadata.format.codec ?? null
     lossless = metadata.format.lossless ?? null
 
-    const commonTags = metadata.common as unknown as Record<string, unknown>
-    replayGainTrack = parseReplayGainDb(commonTags.replaygain_track_gain)
-    replayGainAlbum = parseReplayGainDb(commonTags.replaygain_album_gain)
+    // ReplayGain tags are intentionally not read: applying them would multiply
+    // the same value the fade engine interpolates toward and the two would
+    // fight over `<audio>.volume`.
 
     // Album artist fallback: albumartist → artist → 'Unknown Artist'
     albumArtist = metadata.common.albumartist || metadata.common.artist || 'Unknown Artist'
@@ -85,6 +86,13 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     // Copyright from metadata
     copyright = metadata.common.copyright || null
 
+    // Lyrics from metadata. `common.lyrics` holds one entry per USLT / SYLT /
+    // ©lyr / LYRICS tag, and one file often carries two — the original and its
+    // translation — stamped identically. A SYLT frame stores per-word stamps
+    // instead of text with stamps in it, so it is written back out as enhanced
+    // LyRiC and every kind ends up in one string the lyric player can read.
+    lyrics = collectLyrics(metadata.common.lyrics)
+
     if (metadata.common.picture?.[0]) {
       const pic = metadata.common.picture[0]
       const blob = new Blob([new Uint8Array(pic.data)], { type: pic.format })
@@ -115,18 +123,27 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     bitrate,
     codec,
     lossless,
-    replayGainTrack,
-    replayGainAlbum,
+    lyrics,
   }
 }
 
-function parseReplayGainDb(value: unknown): number | null {
-  const raw = Array.isArray(value) ? value[0] : value
-  if (typeof raw !== 'string' && typeof raw !== 'number') return null
-  const match = String(raw).match(/[-+]?\d+(?:\.\d+)?/)
-  if (!match) return null
-  const gain = Number(match[0])
-  return Number.isFinite(gain) ? gain : null
+// ID3v2 numbers what a lyrics frame carries. 0-3 describe the words themselves
+// (unspecified, lyrics, transcription, movement name); 4 and up are events,
+// chords, trivia and URLs, which would only be noise under the lyrics.
+const LYRIC_CONTENT_TYPES = new Set([0, 1, 2, 3])
+
+function collectLyrics(tags: ILyricsTag[] | undefined): string | null {
+  if (!tags || tags.length === 0) return null
+
+  const parts: string[] = []
+  for (const tag of tags) {
+    // USLT frames carry no content type at all, so only a stated one filters.
+    if (tag.contentType !== undefined && !LYRIC_CONTENT_TYPES.has(tag.contentType)) continue
+    const text = tag.syncText?.length ? serializeSyncLyrics(tag.syncText) : tag.text?.trim()
+    if (text) parts.push(text)
+  }
+
+  return parts.length > 0 ? parts.join('\n') : null
 }
 
 export function revokeTrackUrls(track: Track): void {
