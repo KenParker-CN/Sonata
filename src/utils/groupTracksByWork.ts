@@ -34,10 +34,12 @@ export function groupTracksByWork(tracks: Track[]): TrackListItem[] {
     const items: TrackListItem[] = []
     let run: (WorkItem & { key: string }) | null = null
 
-    // A run only survives as a work when it holds more than one track.
+    // A run only survives as a work when it holds more than one track. A
+    // candidate that never picked up a second consecutive track collapses
+    // back into a standalone entry, keeping its original (unsplit) title.
     const flush = () => {
         if (!run) return
-        if (run.entries.length > 0) {
+        if (run.entries.length > 1) {
             items.push({type: 'work', composer: run.composer, work: run.work, entries: run.entries})
         } else {
             items.push({type: 'track', track: run.entries[0].track})
@@ -47,7 +49,6 @@ export function groupTracksByWork(tracks: Track[]): TrackListItem[] {
 
     for (const track of tracks) {
         const parsed = parseClassicalTitle(track.title)
-        console.log(parsed)
         const composer = track.composer?.trim() || ''
 
         // No candidate section at all: this track ends any run and stands alone.

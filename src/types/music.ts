@@ -22,6 +22,8 @@ export interface Track {
   lossless?: boolean | null
   replayGainTrack?: number | null
   replayGainAlbum?: number | null
+  /** Raw LRC-family text extracted from the file's tag; parsed on demand by src/utils/lyrics.ts. */
+  lyrics?: string | null
 }
 
 export interface Playlist {

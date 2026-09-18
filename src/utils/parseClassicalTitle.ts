@@ -29,11 +29,6 @@ export function parseClassicalTitle(title: string): ParsedClassicalTitle {
       ?.replace(/[\u00A0\u202F]/g, ' ')
       .trim() || ''
   const separator = trimmed.search(COLON)
-  console.log('parse:', {
-    title,
-    trimmed,
-    separator,
-  })
   if (separator < 0) {
     return { work: trimmed, movement: null }
   }

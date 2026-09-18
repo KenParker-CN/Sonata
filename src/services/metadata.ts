@@ -1,6 +1,73 @@
 import {parseBlob} from 'music-metadata'
+import type {ILyricsTag} from 'music-metadata'
 import type {Track} from '../types/music'
 import {makeFileKey, trackIdFor} from '../utils/getFileKey'
+
+// LRC-family stamp precision: centiseconds are the format's most portable
+// fraction and far finer than lyrics timing needs.
+function formatLrcStamp(ms: number): string {
+  const total = Math.max(0, Math.round(ms))
+  const minutes = Math.floor(total / 60_000)
+  const seconds = Math.floor((total % 60_000) / 1000)
+  const centis = Math.floor((total % 1000) / 10)
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centis).padStart(2, '0')}`
+}
+
+/**
+ * Turns one music-metadata lyrics tag into the LRC-with-angle-brackets text
+ * `src/utils/lyrics.ts` parses. Two shapes come out of `music-metadata`:
+ *  - USLT (unsynchronized): a plain text block — passed through as-is.
+ *  - SYLT (synchronized): a flat list of {text, timestamp} syllables/words in
+ *    milliseconds. A newline embedded in an entry's text is the only line
+ *    break SYLT gives us, so it doubles as both a syllable and a line-end
+ *    marker here.
+ */
+export function serializeLyricsTag(tag: ILyricsTag): string {
+  if (tag.syncText.length === 0) return tag.text ?? ''
+
+  const lines: string[] = []
+  let lineStart: number | null = null
+  let lineBody = ''
+  let fallbackMs = 0
+
+  const flush = () => {
+    const body = lineBody.trim()
+    if (body && lineStart !== null) lines.push(`[${formatLrcStamp(lineStart)}]${body}`)
+    lineStart = null
+    lineBody = ''
+  }
+
+  for (const entry of tag.syncText) {
+    const ms = Number.isFinite(entry.timestamp) ? Math.max(0, entry.timestamp as number) : fallbackMs
+    fallbackMs = ms
+    const segments = (entry.text ?? '').split(/\r?\n/)
+
+    segments.forEach((segment, index) => {
+      if (segment) {
+        lineStart ??= ms
+        lineBody += `<${formatLrcStamp(ms)}>${segment}`
+      }
+      if (index < segments.length - 1) flush()
+    })
+  }
+  flush()
+
+  return lines.join('\n')
+}
+
+/**
+ * A track's tag can carry several lyrics entries at once (original text plus
+ * a translation, stored as separate frames). Each is serialized on its own,
+ * then joined: `parseLyrics` sorts every resulting line by timestamp and
+ * folds lines that land on the exact same stamp together as a translation
+ * pair, so it does not matter that the two blocks arrive back-to-back here
+ * rather than already interleaved.
+ */
+export function extractLyrics(lyricsTags: ILyricsTag[] | undefined): string | null {
+  if (!lyricsTags || lyricsTags.length === 0) return null
+  const blocks = lyricsTags.map(serializeLyricsTag).filter(block => block.trim().length > 0)
+  return blocks.length > 0 ? blocks.join('\n') : null
+}
 
 // `path` is the track's location relative to the folder the user picked, which
 // is what persistence later re-matches the cached metadata against.
@@ -23,6 +90,7 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
   let bitrate: number | null = null
   let codec: string | null = null
   let lossless: boolean | null = null
+  let lyrics: string | null = null
 
   try {
     const metadata = await parseBlob(file)
@@ -80,6 +148,10 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     // Copyright from metadata
     copyright = metadata.common.copyright || null
 
+    // Lyrics tag (USLT/SYLT, Vorbis LYRICS, MP4 ©lyr, ...) → LRC-family text
+    // that src/utils/lyrics.ts can parse directly.
+    lyrics = extractLyrics(metadata.common.lyrics)
+
     if (metadata.common.picture?.[0]) {
       const pic = metadata.common.picture[0]
       const blob = new Blob([new Uint8Array(pic.data)], { type: pic.format })
@@ -110,6 +182,7 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     bitrate,
     codec,
     lossless,
+    lyrics,
   }
 }
 export function revokeTrackUrls(track: Track): void {

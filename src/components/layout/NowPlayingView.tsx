@@ -9,10 +9,8 @@ import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
 import {BackgroundRender} from '@applemusic-like-lyrics/react'
+import LyricsPanel from '@/components/layout/LyricsPanel'
 
-// Lyrics reach into AMLL for both the format parsers and the renderer — a few
-// hundred kilobytes that belong to Now Playing, not to the app shell, so the
-// column arrives after the overlay does and shows the same box while it loads.
 interface NowPlayingViewProps {
     track: Track | null
     isPlaying: boolean
