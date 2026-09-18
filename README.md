@@ -1,90 +1,201 @@
 # Sonata — 本地优先的网页音乐播放器
 
-一个面向个人曲库、本地优先、纯浏览器运行的音乐播放器。基于 React、TypeScript、Vite 与 daisyUI（Tailwind CSS v4）。通过 File System Access API 实现跨会话的文件夹持久访问。
+Sonata 是一个面向个人曲库的本地音乐播放器。它运行在浏览器中，不需要后端、登录或云端账号，音乐文件、曲库缓存、歌单和自定义封面都保留在本地。
 
-## 功能特性
+Sonata 适合整理和播放个人音乐收藏，尤其关注古典音乐、多语言歌词、音频技术信息和本地隐私。
 
-- **本地曲库** — 只需选择一次音乐文件夹；Sonata 把元数据与封面缓存进 IndexedDB，之后每次打开都是秒开。
-- **File System Access API** — 持久目录句柄，浏览器重启后不必重新选文件夹。
-- **丰富的元数据** — 经由 `music-metadata-browser` 读取 ID3、Vorbis、APE、MP4 标签。支持封面、作曲家、碟号/曲号、发行日期、编码格式、位深、采样率、码率、无损标记。
-- **古典友好** — 作曲家分组、作品分组、表演者与专辑艺术家分离。
-- **歌词** — 支持逐行与逐词时间轴（`[mm:ss.xx]` 与 `<mm:ss>` 两种写法），双语歌词按同一时间戳成组高亮；没有时间轴的歌词按原文降级显示，不做跟随滚动。
-- **音质标识** — 依据位深/采样率/码率给出实测标注（如 `16B/44.1kHz`），而非 Master/Hi-Res 之类的营销档位。
-- **歌单** — 新建、排序、改名、删除、自定义封面（图片以 blob 存在 IndexedDB）。
-- **播放队列** — 跨页面切换保持，支持随机、循环、下一首播放、加入队列。
-- **响应式布局** — 桌面端：固定侧栏 + 可选右侧队列面板。移动端：底部抽屉式队列 + 抽屉导航。
-- **主题系统** — 明暗切换带**圆形展开过渡**（View Transitions API），从主题按钮的位置向外扩散。
-- **克制的视觉规范** — 全站圆角收在 1–3px，配色走 daisyUI light/dark 两套主题（由 `<html data-theme>` 决定）。
-- **零配置** — 无后端、无登录、无外部服务，完全跑在浏览器里。
+## 功能概览
+
+### 本地曲库
+
+- 选择一次音乐文件夹后，Sonata 会递归扫描其中的音频文件。
+- 使用 File System Access API 记住目录权限，浏览器重新打开后可以恢复曲库。
+- 对不支持 File System Access API 的浏览器，提供文件选择回退方案。
+- 音频元数据和封面缓存到 IndexedDB，避免每次启动都重新解析。
+- 支持重新导入同一文件夹，已有曲目会根据稳定文件标识去重。
+- 支持从曲库中移除曲目或清空本地缓存；不会删除磁盘上的原始音乐文件。
+
+### 音频格式与元数据
+
+- 支持 MP3、M4A、M4B、AAC、FLAC、WAV、OGG、OGA、Opus、WebM 音频、AIFF、ALAC 和 WMA 等常见扩展名。
+- 读取标题、艺术家、专辑、专辑艺术家、作曲家、碟号、曲号、发行日期和版权信息。
+- 读取编码格式、位深、采样率、码率、无损标记和 ReplayGain 信息。
+- 显示基于实际音频参数生成的音质标识，而不是使用营销级别名称。
+- 对部分浏览器原生播放不理想的 AAC/ALAC 音频提供软件解码回退。
+
+### 歌词
+
+Sonata 支持内嵌歌词和外部 LRC 歌词，读取优先级如下：
+
+```text
+同目录同名 .lrc 文件
+        ↓ 不存在或为空
+音频元数据中的 lyrics 字段
+        ↓ 都不存在
+无歌词
+```
+
+例如：
+
+```text
+Music/
+├── 01 - Society.flac
+└── 01 - Society.lrc
+```
+
+外部歌词匹配规则：
+
+- `.lrc` 与音频文件必须位于同一目录；
+- 文件名主干相同；
+- 匹配时不区分大小写；
+- 支持 UTF-8 BOM，读取时会自动移除；
+- 空的或读取失败的 `.lrc` 不会阻断音频导入，会回退到内嵌歌词。
+
+歌词解析支持：
+
+- 普通逐行 LRC：`[00:40.33]歌词`；
+- 尖括号逐词时间轴；
+- 方括号逐词时间轴；
+- 中英文双语歌词；
+- `[offset:+/-毫秒]` 时间偏移标签；
+- 没有时间轴的纯文本歌词。
+
+歌词面板提供以下交互：
+
+- 当前行自动居中并放大显示；
+- 已播放和未播放歌词使用不同透明度；
+- 逐词歌词支持平滑高亮填充；
+- 手动滚动歌词后暂停自动跟随；
+- 通过“Current line”按钮恢复跟随；
+- 点击任意歌词行跳转到该行时间点播放；
+- 支持键盘 `Enter` 和 `Space` 触发歌词跳转。
+
+### 播放控制
+
+- 播放、暂停、上一首、下一首；
+- 播放队列支持添加、删除、拖拽调整顺序和“下一首播放”；
+- 支持随机播放；
+- 支持关闭循环、单曲循环和列表循环；
+- 进度条支持鼠标和触摸拖动，并显示时间预览；
+- 支持音量调节和静音；
+- 切歌时支持淡出与淡入；
+- 页面切换时播放队列和播放器状态保持不变。
+
+### Now Playing 与视觉效果
+
+- 大尺寸专辑封面和当前歌曲信息；
+- 根据当前封面提取播放器主题色；
+- Apple Music 风格动态背景渲染；
+- Web Audio 频谱可视化；
+- 可调整背景帧率、渲染缩放、流动速度、低频音量和静态模式；
+- 显示当前曲目的音频技术信息。
+
+### 曲库组织
+
+- 按曲目、艺术家、作曲家、专辑和歌单浏览；
+- 支持艺术家、专辑艺术家和作曲家分组；
+- 支持搜索、排序、字母索引和列表/网格视图；
+- 支持创建、重命名、排序和删除歌单；
+- 支持歌单描述和自定义封面；
+- 支持曲目、专辑、艺术家和作曲家级别的右键菜单操作。
+
+### 界面与响应式布局
+
+- 桌面端使用可折叠侧栏和可选右侧播放队列；
+- 移动端使用抽屉式导航和底部队列面板；
+- 支持明暗主题；
+- 主题切换使用圆形展开过渡；
+- 适配键盘操作、焦点状态和屏幕阅读器语义；
+- 视觉语言使用克制的圆角、低干扰动画和本地播放器风格布局。
 
 ## 技术栈
 
-| 层次 | 选型 |
-|-------|--------|
+| 层次 | 技术 |
+| --- | --- |
 | 框架 | React 19 + TypeScript |
-| 构建 | Vite 8（`vite-plugin-node-polyfills` 提供 Buffer 等 polyfill） |
+| 构建 | Vite 8 |
 | 路由 | React Router 7 |
-| UI | daisyUI 5 + Tailwind CSS v4 |
-| 弹层 | Radix UI Context Menu + `@floating-ui/react` |
-| 动画 | Motion（原 Framer Motion）+ View Transitions API |
-| 音频 | 浏览器 `<audio>` 元素 |
-| 元数据 | `music-metadata-browser` |
-| 存储 | IndexedDB（`idb`） |
-| 文件访问 | File System Access API（不支持时回退 `<input type="file">`） |
-| 代码检查 | ESLint 10 + TypeScript ESLint |
+| 样式 | Tailwind CSS v4 + daisyUI 5 |
+| UI 组件 | Material UI、Radix UI、Floating UI |
+| 动画 | Motion + View Transitions API |
+| 音频 | HTMLAudioElement + Web Audio API |
+| 音频元数据 | music-metadata |
+| 歌词 | 自定义 LRC/SYLT 解析器 |
+| 本地存储 | IndexedDB + idb |
+| 文件访问 | File System Access API，带文件选择回退 |
+| 测试 | Vitest |
+| 代码检查 | ESLint + TypeScript ESLint |
 
 ## 项目结构
 
-```
+```text
 src/
 ├── components/
-│   ├── animate/           # 动效组件（theme-toggler、gradient、rolling、shimmering、splitting）
-│   ├── context-menus/     # 右键菜单（专辑、实体、曲目）
-│   ├── data/              # 数据展示（卡片、列表行、网格、书架、lockup）
-│   ├── dialogs/           # 确认框、歌单新建/编辑
-│   ├── feedback/          # 空状态、404、加载、状态横幅、导入进度
-│   ├── layout/            # AppLayout、Sidebar、PlayerBar、NowPlayingView、QueuePanel、QueueSidePanel、PageHeader
-│   ├── media/             # CoverArt、GeneratedArt、ArtPicker、AudioQualityBadge、PlayButton、NowPlayingBars
-│   ├── navigation/        # SearchInput、BackLink、ViewModeToggle、SortSelect、AlphabetIndex、LetterSection
-│   ├── queue/             # QueueList
-│   └── ui/                # 基础件：ContextMenu、Dialog、Drawer
-├── contexts/
-│   └── app.tsx            # 全局上下文（曲目、歌单、播放器、主题、侧栏等）
-├── hooks/                 # useAudioPlayer、useImportManager、useMediaQuery、useSearch、useSort、useViewMode
-├── pages/                 # Library、Artists、ArtistDetail、Composers、ComposerDetail、Albums、AlbumDetail、Playlists、PlaylistDetail、TrackDetail
-├── services/              # customArt、libraryStore、metadata、musicFolders、restoreLibrary
-├── types/                 # 类型定义（music、file-system-access）
-├── utils/                 # 工具（alphabet、collate、format*、generatedArt、getAudioQualityBadge、group*、lyrics、parse*、playlist、routes、search）
-├── index.css              # Tailwind v4 主题令牌 + daisyUI light/dark 主题 + 全局样式
-├── App.tsx                # 根组件：状态、Provider、路由、播放器栏
-└── main.tsx               # 入口
+│   ├── animate/          # 主题过渡、渐变、文字与加载动画
+│   ├── context-menus/    # 曲目、专辑和实体右键菜单
+│   ├── data/             # 卡片、列表、网格和实体展示
+│   ├── dialogs/          # 确认框和歌单编辑对话框
+│   ├── feedback/         # 空状态、导入进度和状态提示
+│   ├── layout/           # 页面布局、播放器、队列、Now Playing、歌词
+│   ├── media/            # 封面、音质标识和播放状态组件
+│   ├── navigation/       # 搜索、排序、视图切换和字母索引
+│   ├── queue/             # 播放队列
+│   └── ui/                # 通用菜单、对话框和抽屉
+├── contexts/             # 全局曲库、歌单、播放器和界面状态
+├── hooks/                # 播放器、导入、搜索、排序和响应式 hooks
+├── pages/                # 曲库、艺术家、作曲家、专辑、歌单和曲目页面
+├── services/             # 元数据、文件夹、歌词、IndexedDB 和恢复服务
+├── types/                # 音乐和文件系统类型
+└── utils/                # 歌词解析、分组、搜索、格式化和路径工具
 ```
 
 ## 快速开始
 
 ### 环境要求
 
-- Node.js 20+
-- npm（仓库使用 `package-lock.json`）
-- Chromium 系浏览器（持久文件夹访问依赖 File System Access API）
+- Node.js 20 或更高版本；
+- npm 或 pnpm；
+- 推荐使用 Chromium 系浏览器，以获得持久目录访问能力。
 
-### 安装与运行
+### 安装依赖
 
 ```bash
 npm install
+```
+
+如果使用 pnpm：
+
+```bash
+pnpm install
+```
+
+### 启动开发服务器
+
+```bash
 npm run dev
 ```
 
-打开 http://localhost:5173
+默认地址：<http://localhost:5173>
 
 ### 生产构建
 
 ```bash
 npm run build
+```
+
+预览生产构建：
+
+```bash
 npm run preview
 ```
 
-### 代码检查
+### 运行测试
+
+```bash
+npm run test
+```
+
+### 运行代码检查
 
 ```bash
 npm run lint
@@ -92,43 +203,39 @@ npm run lint
 
 ## 使用流程
 
-1. **添加音乐** — 点击侧栏的 "Add Music"，选择包含音频文件的文件夹。
-2. **持久授权** — 按提示授予权限，Sonata 会记住这个文件夹。
-3. **浏览** — 在曲库、艺术家、作曲家、专辑、歌单之间导航。
-4. **播放** — 点击任意曲目，队列在页面切换后仍然保留。
-5. **歌单** — 新建歌单、拖拽排序、自定义封面。
-6. **主题** — 侧栏切换明暗，圆形展开动画从按钮处扩散。
+1. 点击侧栏中的 **Add Music**。
+2. 选择音乐文件夹，或在回退模式下选择音频与 `.lrc` 文件。
+3. 等待导入完成，Sonata 会读取音频元数据、内嵌封面和外部歌词。
+4. 在 Library、Artists、Composers、Albums 和 Playlists 中浏览曲库。
+5. 点击曲目开始播放，使用底部播放器控制播放、音量、循环、随机和队列。
+6. 打开 Now Playing 查看封面、动态背景、频谱和歌词。
+7. 点击歌词行可以跳转到对应时间点；手动滚动后可以使用 **Current line** 恢复自动跟随。
+8. 使用主题按钮切换明暗主题。
 
-## 关键实现
+## 数据与隐私
 
-### 主题过渡（View Transitions API）
-`src/components/animate/theme-toggler.tsx` 使用 `document.startViewTransition()` 配合圆形 `clip-path` 动画：旧快照保持可见，新主题从按钮中心扩散出去，中间不闪白。`src/index.css` 里 `:root { view-transition-name: root }` 让整页（含 body 背景）一起参与快照。
+Sonata 默认不连接后端，也不会自动上传音乐、歌词、封面或播放数据。音频文件通过浏览器本地读取，元数据、歌单和自定义封面保存在当前浏览器的 IndexedDB 中。
 
-### 主题令牌
-`src/index.css` 的 `@theme` 定义设计令牌（颜色、圆角、字体、动画），daisyUI 的 light/dark 两套主题由 `@plugin "daisyui/theme"` 声明。明暗状态以 `<html data-theme>` 为准，Tailwind 的 `dark:` 变体也重写到这里，因此不受系统偏好干扰。播放器栏与 Now Playing 覆盖层是「永远深色」的，所以只能读 `player-*` 系列令牌，不能用跟随主题的令牌。
-
-### 音频播放
-`src/hooks/useAudioPlayer.ts` 用单个 `<audio>` 元素驱动播放，对外暴露命令式接口（`playFromContext`、队列控制、seek、setVolume 等），进度与就绪状态回灌到 React 状态。
-
-### 曲库持久化
-`src/services/libraryStore.ts` 用 `idb` 存曲目、歌单与封面 blob。`src/services/restoreLibrary.ts` 在启动时复原，必要时重新申请 File System Access 句柄。命中缓存的曲目直接使用入库时保存的元数据，不会重新解析——因此新增解析能力后需要重新导入才能生效。
-
-### 元数据解析
-`src/services/metadata.ts` 经由 `music-metadata-browser` 提取标签。艺术家与专辑艺术家以原始字符串保存，展示时才由 `parseArtists()` 按 `, ; / \` 拆分。歌词会收集 `common.lyrics` 的全部条目（原文与译文常分条存放），拼接后交给 `src/utils/lyrics.ts` 解析。
-
-### 歌词解析
-`src/utils/lyrics.ts` 同时处理三种写法：经典 `[mm:ss.xx] 整行`、角度括号逐词 `[mm:ss]<mm:ss.ff>词<…>`（双语原文与译词共用一个行时间戳）、方括号逐词 `[mm:ss]词[mm:ss]词`（分段的原始空格需保留，且可能把单词拆在相邻两段里；原文行常在句尾多带一个结束时间戳）。没有时间戳的行会保留下来并锚定到上一个已知时间戳；整首歌词完全没有时间戳时，`NowPlayingView` 直接按原文显示。
+清除缓存只会删除 Sonata 保存的本地数据，不会删除用户磁盘上的音乐文件。
 
 ## 浏览器兼容性
 
-| 能力 | Chrome/Edge | Firefox | Safari |
-|---------|-------------|---------|--------|
-| File System Access API | ✅ | ❌（回退） | ❌（回退） |
-| View Transitions API | ✅ | ✅（需开关） | ✅（18.4+） |
-| OKLCH 颜色 | ✅ | ✅ | ✅ |
-| `<audio>` 播放 | ✅ | ✅ | ✅ |
+| 能力 | Chrome / Edge | Firefox | Safari |
+| --- | --- | --- | --- |
+| File System Access API | 支持 | 回退到文件选择 | 回退到文件选择 |
+| HTML 音频播放 | 支持 | 支持 | 支持 |
+| View Transitions API | 支持 | 部分版本需开启 | 新版本支持 |
+| Web Audio API | 支持 | 支持 | 支持 |
+| IndexedDB | 支持 | 支持 | 支持 |
 
-Firefox / Safari 用户可用文件选择回退方案（每次会话重新选文件夹）。
+使用 Firefox 或 Safari 时，可以正常导入和播放音乐，但由于浏览器不提供持久目录句柄，重新打开页面后可能需要再次选择音乐文件。
+
+## 已知限制
+
+- Sonata 当前是本地播放器，不提供云同步、多设备同步或在线播放服务。
+- 外部歌词目前按同目录同名 `.lrc` 文件自动匹配，不会从第三方网站自动下载歌词。
+- 浏览器对部分音频编码、系统媒体按键和后台播放能力的支持存在差异。
+- 构建产物包含完整的音频解析与解码能力，生产构建可能提示较大的 JavaScript chunk。
 
 ## 许可证
 
