@@ -110,21 +110,21 @@ Music/
 
 ## 技术栈
 
-| 层次 | 技术 |
-| --- | --- |
-| 框架 | React 19 + TypeScript |
-| 构建 | Vite 8 |
-| 路由 | React Router 7 |
-| 样式 | Tailwind CSS v4 + daisyUI 5 |
-| UI 组件 | Material UI、Radix UI、Floating UI |
-| 动画 | Motion + View Transitions API |
-| 音频 | HTMLAudioElement + Web Audio API |
-| 音频元数据 | music-metadata |
-| 歌词 | 自定义 LRC/SYLT 解析器 |
-| 本地存储 | IndexedDB + idb |
-| 文件访问 | File System Access API，带文件选择回退 |
-| 测试 | Vitest |
-| 代码检查 | ESLint + TypeScript ESLint |
+| 层次       | 技术                                   |
+|------------|----------------------------------------|
+| 框架       | React 19 + TypeScript                  |
+| 构建       | Vite 8                                 |
+| 路由       | React Router 7                         |
+| 样式       | Tailwind CSS v4 + daisyUI 5            |
+| UI 组件    | Material UI、Radix UI、Floating UI     |
+| 动画       | Motion + View Transitions API          |
+| 音频       | HTMLAudioElement + Web Audio API       |
+| 音频元数据 | music-metadata                         |
+| 歌词       | 自定义 LRC/SYLT 解析器                 |
+| 本地存储   | IndexedDB + idb                        |
+| 文件访问   | File System Access API，带文件选择回退 |
+| 测试       | Vitest                                 |
+| 代码检查   | ESLint + TypeScript ESLint             |
 
 ## 项目结构
 
@@ -220,13 +220,13 @@ Sonata 默认不连接后端，也不会自动上传音乐、歌词、封面或�
 
 ## 浏览器兼容性
 
-| 能力 | Chrome / Edge | Firefox | Safari |
-| --- | --- | --- | --- |
-| File System Access API | 支持 | 回退到文件选择 | 回退到文件选择 |
-| HTML 音频播放 | 支持 | 支持 | 支持 |
-| View Transitions API | 支持 | 部分版本需开启 | 新版本支持 |
-| Web Audio API | 支持 | 支持 | 支持 |
-| IndexedDB | 支持 | 支持 | 支持 |
+| 能力                   | Chrome / Edge | Firefox        | Safari         |
+|------------------------|---------------|----------------|----------------|
+| File System Access API | 支持          | 回退到文件选择 | 回退到文件选择 |
+| HTML 音频播放          | 支持          | 支持           | 支持           |
+| View Transitions API   | 支持          | 部分版本需开启 | 新版本支持     |
+| Web Audio API          | 支持          | 支持           | 支持           |
+| IndexedDB              | 支持          | 支持           | 支持           |
 
 使用 Firefox 或 Safari 时，可以正常导入和播放音乐，但由于浏览器不提供持久目录句柄，重新打开页面后可能需要再次选择音乐文件。
 
