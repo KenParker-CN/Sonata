@@ -1,5 +1,5 @@
 import type {CSSProperties, RefObject} from 'react'
-import {lazy, Suspense, useEffect, useRef, useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
 import type {Track} from '@/types/music'
 import {motion} from 'motion/react'
 import {Link} from 'react-router-dom'
@@ -8,10 +8,6 @@ import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
 
-// Lyrics reach into AMLL for both the format parsers and the renderer — a few
-// hundred kilobytes that belong to Now Playing, not to the app shell, so the
-// column arrives after the overlay does and shows the same box while it loads.
-const LyricsPanel = lazy(() => import('@/components/layout/LyricsPanel'))
 interface NowPlayingViewProps {
     track: Track | null
     isPlaying: boolean
@@ -94,23 +90,6 @@ function MetadataPanel({track}: { track: Track | null }) {
                     Rich recording details will appear here when they are available in your local tags.
                 </div>
             )}
-        </section>
-    )
-}
-
-/** The lyrics box, empty, for as long as its chunk is in flight. */
-function LyricsPlaceholder() {
-    return (
-        <section
-            className="mt-4 flex h-80 flex-col rounded-2xl bg-player-border/30 p-5 lg:h-auto lg:min-h-0 lg:flex-1"
-            aria-hidden="true"
-        >
-            <div className="mb-4 h-3 w-16 animate-pulse rounded bg-player-border/60"/>
-            <div className="flex min-h-0 flex-1 flex-col justify-center gap-4">
-                <div className="h-4 w-2/3 animate-pulse rounded bg-player-border/60"/>
-                <div className="h-4 w-4/5 animate-pulse rounded bg-player-border/60"/>
-                <div className="h-4 w-1/2 animate-pulse rounded bg-player-border/60"/>
-            </div>
         </section>
     )
 }
@@ -267,13 +246,10 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onClo
                         </div>
                     </div>
 
-                    {/* Right column: track details, lyrics, then the tag details */}
+                    {/* Right column: track details and tag details */}
                     <aside
                         className="flex min-w-0 w-full shrink-0 flex-col justify-start lg:h-full lg:min-h-0 lg:w-140">
                         <TrackInfo track={track} onNavigate={onClose}/>
-                        <Suspense fallback={<LyricsPlaceholder/>}>
-                            <LyricsPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
-                        </Suspense>
                         <MetadataPanel track={track}/>
                     </aside>
                 </div>

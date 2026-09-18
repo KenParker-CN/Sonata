@@ -1,4 +1,3 @@
-import type {ILyricsTag} from 'music-metadata'
 import {parseBlob} from 'music-metadata'
 import type {Track} from '../types/music'
 import {makeFileKey, trackIdFor} from '../utils/getFileKey'
