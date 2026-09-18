@@ -125,6 +125,7 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
     const userVolumeRef = useRef(1)
     const isPlayingRef = useRef(false)
     const trackByIdRef = useRef<Map<string, Track>>(new Map(tracks.map(t => [t.id, t])))
+    const progressFrameRef = useRef<number | null>(null)
 
     const repeatModeRef = useRef<RepeatMode>('off')
     const shuffleRef = useRef(false)
@@ -319,6 +320,24 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             const onTimeUpdate = () => setCurrentTime(audio.currentTime)
             const onLoadedMetadata = () => setDuration(audio.duration)
 
+            // Smooth progress animation at 60fps
+            const startProgressLoop = () => {
+                const tick = () => {
+                    if (audioRef.current && isPlayingRef.current) {
+                        setCurrentTime(audioRef.current.currentTime)
+                        progressFrameRef.current = requestAnimationFrame(tick)
+                    }
+                }
+                progressFrameRef.current = requestAnimationFrame(tick)
+            }
+
+            const stopProgressLoop = () => {
+                if (progressFrameRef.current !== null) {
+                    cancelAnimationFrame(progressFrameRef.current)
+                    progressFrameRef.current = null
+                }
+            }
+
             // Surface decode/playback failures instead of failing silently.
             const onError = () => {
                 if (!audio.src || softwareDecodeRef.current) return
@@ -373,8 +392,14 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
                 }
             }
 
-            const onPlay = () => setIsPlaying(true)
-            const onPause = () => setIsPlaying(false)
+            const onPlay = () => {
+                setIsPlaying(true)
+                startProgressLoop()
+            }
+            const onPause = () => {
+                setIsPlaying(false)
+                stopProgressLoop()
+            }
 
             const onWaiting = () => {
                 console.warn('[audio] waiting', {
@@ -415,7 +440,6 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             audio.addEventListener('stalled', onStalled)
             audio.addEventListener('suspend', onSuspend)
             audio.addEventListener('playing', onPlaying)
-            audio.addEventListener('timeupdate', onTimeUpdate)
             audio.addEventListener('loadedmetadata', onLoadedMetadata)
             audio.addEventListener('ended', onEnded)
             audio.addEventListener('play', onPlay)
@@ -423,13 +447,13 @@ export function useAudioPlayer(tracks: Track[]): AudioPlayerState & AudioPlayerA
             audio.addEventListener('error', onError)
 
             return () => {
-                audio.removeEventListener('timeupdate', onTimeUpdate)
                 audio.removeEventListener('loadedmetadata', onLoadedMetadata)
                 audio.removeEventListener('ended', onEnded)
                 audio.removeEventListener('play', onPlay)
                 audio.removeEventListener('pause', onPause)
                 audio.removeEventListener('error', onError)
                 cancelFade()
+                stopProgressLoop()
                 audio.pause()
                 audio.src = ''
                 if (decodedUrlRef.current) {

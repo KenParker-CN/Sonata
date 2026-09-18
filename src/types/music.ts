@@ -1,5 +1,4 @@
 export type RepeatMode = 'off' | 'one' | 'all'
-
 export interface Track {
   id: string
   url: string

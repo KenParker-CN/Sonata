@@ -1,11 +1,11 @@
 import type {RepeatMode, Track} from '@/types/music'
-import {formatTime} from '@/utils/formatTime'
+import {formatTimeWithHours} from '@/utils/formatTime'
 import {parseArtists} from '@/utils/parseArtists'
 import {ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2, VolumeX,} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {Link} from 'react-router-dom'
 import * as React from 'react'
-import {useState} from 'react'
+import {useState, useRef, useEffect} from 'react'
 import {AnimatePresence, motion} from 'motion/react'
 import {artistPath, trackPath} from '@/utils/routes'
 import NowPlayingView from '@/components/layout/NowPlayingView'
@@ -62,6 +62,119 @@ export default function PlayerBar({
                                   }: PlayerBarProps) {
     const [nowPlayingOpen, setNowPlayingOpen] = useState(false)
     const nowPlayingVisible = hasTrack && nowPlayingOpen
+    const [isDragging, setIsDragging] = useState(false)
+    const [showTooltip, setShowTooltip] = useState(false)
+    const [tooltipX, setTooltipX] = useState(0)
+    const [previewTime, setPreviewTime] = useState(0)
+    const [containerWidth, setContainerWidth] = useState(0)
+    const containerRef = useRef<HTMLDivElement>(null)
+
+    const updatePreview = (clientX: number) => {
+        if (!hasTrack || !duration || !containerRef.current) return
+        const rect = containerRef.current.getBoundingClientRect()
+        const x = clientX - rect.left
+        const percentage = Math.max(0, Math.min(1, x / rect.width))
+        const time = percentage * duration
+        setPreviewTime(time)
+        setTooltipX(x)
+    }
+
+    const handleSeek = (clientX: number) => {
+        updatePreview(clientX)
+        onSeek(previewTime)
+    }
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+        setShowTooltip(true)
+        updatePreview(e.clientX)
+    }
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isDragging) {
+            updatePreview(e.clientX)
+        } else if (hasTrack && duration) {
+            updatePreview(e.clientX)
+            setShowTooltip(true)
+        }
+    }
+
+    const handleMouseUp = () => {
+        if (isDragging) {
+            onSeek(previewTime)
+        }
+        setIsDragging(false)
+        setShowTooltip(false)
+    }
+
+    const handleMouseEnter = () => {
+        if (hasTrack && duration) {
+            setShowTooltip(true)
+        }
+    }
+
+    const handleMouseLeave = () => {
+        if (!isDragging) {
+            setShowTooltip(false)
+        }
+    }
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!hasTrack || !duration) return
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+        setShowTooltip(true)
+        const touch = e.touches[0]
+        updatePreview(touch.clientX)
+    }
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging || !hasTrack || !duration) return
+        e.stopPropagation()
+        const touch = e.touches[0]
+        updatePreview(touch.clientX)
+    }
+
+    const handleTouchEnd = () => {
+        if (isDragging) {
+            onSeek(previewTime)
+        }
+        setIsDragging(false)
+        setShowTooltip(false)
+    }
+
+    useEffect(() => {
+        if (isDragging) {
+            const handleGlobalMouseMove = (e: MouseEvent) => {
+                updatePreview(e.clientX)
+            }
+            const handleGlobalMouseUp = () => {
+                onSeek(previewTime)
+                setIsDragging(false)
+                setShowTooltip(false)
+            }
+            window.addEventListener('mousemove', handleGlobalMouseMove)
+            window.addEventListener('mouseup', handleGlobalMouseUp)
+            return () => {
+                window.removeEventListener('mousemove', handleGlobalMouseMove)
+                window.removeEventListener('mouseup', handleGlobalMouseUp)
+            }
+        }
+    }, [isDragging, hasTrack, duration, onSeek, previewTime])
+
+    useEffect(() => {
+        const updateWidth = () => {
+            if (containerRef.current) {
+                setContainerWidth(containerRef.current.clientWidth)
+            }
+        }
+        updateWidth()
+        window.addEventListener('resize', updateWidth)
+        return () => window.removeEventListener('resize', updateWidth)
+    }, [])
 
     return (
         <>
@@ -76,10 +189,50 @@ export default function PlayerBar({
                 )}
             </AnimatePresence>
 
-            <div className={cn(
-                'player-dock shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5',
-                hasTrack ? 'h-(--player-height) gap-1 sm:gap-4' : 'h-12 justify-center',
-            )}>
+            <div
+                ref={containerRef}
+                className={cn(
+                    'player-dock shrink-0 bg-player text-player-foreground border-t border-player-border flex items-center px-2 sm:px-5',
+                    hasTrack ? 'h-(--player-height) gap-1 sm:gap-4' : 'h-12 justify-center',
+                    isDragging && 'is-dragging',
+                )}
+                 style={{'--progress-fill': `${duration > 0 ? ((isDragging ? previewTime : currentTime) / duration) * 100 : 0}%`} as React.CSSProperties}
+                 onMouseMove={handleMouseMove}
+                 onMouseUp={handleMouseUp}
+                 onMouseEnter={handleMouseEnter}
+                 onMouseLeave={handleMouseLeave}
+                 onTouchStart={handleTouchStart}
+                 onTouchMove={handleTouchMove}
+                 onTouchEnd={handleTouchEnd}
+                 onClick={(e) => {
+                     if (!hasTrack || !duration || isDragging) return
+                     // Don't handle clicks on buttons or interactive elements
+                     const target = e.target as HTMLElement
+                     if (target.closest('button') || target.closest('input') || target.closest('a')) return
+                     const rect = e.currentTarget.getBoundingClientRect()
+                     const y = e.clientY - rect.top
+                     // Only handle clicks within the top progress bar area (top 8px)
+                     if (y <= 8) {
+                         handleSeek(e.clientX)
+                     }
+                 }}>
+                {hasTrack && showTooltip && (
+                    <div
+                        className="progress-tooltip visible"
+                        style={{
+                            left: `${Math.max(40, Math.min(tooltipX, containerWidth - 40))}px`,
+                        } as React.CSSProperties}
+                    >
+                        {formatTimeWithHours(previewTime)} / {formatTimeWithHours(duration)}
+                    </div>
+                )}
+                {hasTrack && (
+                    <div
+                        className="progress-thumb"
+                        style={{left: `calc(${duration > 0 ? ((isDragging ? previewTime : currentTime) / duration) * 100 : 0}% - 6px)`} as React.CSSProperties}
+                        onMouseDown={handleMouseDown}
+                    />
+                )}
                 {hasTrack ? <>
                     {/* Left: track info  — fixed width block; the cover is anchored to its left edge regardless of title length */}
                     <div className="hidden sm:flex w-65 lg:w-[320px] shrink-0 min-w-0 justify-start">
@@ -139,26 +292,11 @@ export default function PlayerBar({
                         </AnimatePresence>
                     </div>
 
-                    {/* Center: time + progress (mobile also shows the track title) */}
+                    {/* Center: time display (mobile also shows the track title) */}
                     <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                         <p className="sm:hidden truncate text-xs font-medium text-player-foreground">
                             {track?.title ?? 'No track selected'}
                         </p>
-                        <div
-                            className="flex items-center gap-2 sm:gap-3 min-w-0 text-xs text-player-muted tabular-nums">
-                            <span className="w-9 sm:w-11 text-right shrink-0">{formatTime(currentTime)}</span>
-                            <input
-                                type="range"
-                                min={0}
-                                max={duration || 0}
-                                value={currentTime}
-                                onChange={e => onSeek(Number(e.target.value))}
-                                aria-label="Track progress"
-                                className="progress-bar progress-bar-player flex-1 h-5 min-w-0"
-                                style={{'--range-fill': `${duration > 0 ? (currentTime / duration) * 100 : 0}%`} as React.CSSProperties}
-                            />
-                            <span className="w-9 sm:w-11 shrink-0">{formatTime(duration)}</span>
-                        </div>
 
                         {playbackError && (
                             <p className="truncate text-[11px] text-destructive" role="alert">

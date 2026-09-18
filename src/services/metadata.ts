@@ -23,8 +23,6 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
   let bitrate: number | null = null
   let codec: string | null = null
   let lossless: boolean | null = null
-  let replayGainTrack: number | null = null
-  let replayGainAlbum: number | null = null
 
   try {
     const metadata = await parseBlob(file)
@@ -40,23 +38,6 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     codec = metadata.format.codec ?? null
     lossless = metadata.format.lossless ?? null
 
-    const commonTags = metadata.common as unknown as Record<string, unknown>
-    replayGainTrack = parseReplayGainDb(commonTags.replaygain_track_gain)
-    replayGainAlbum = parseReplayGainDb(commonTags.replaygain_album_gain)
-
-    if (replayGainTrack === null || replayGainAlbum === null) {
-      for (const tagGroup of Object.values(metadata.native)) {
-        for (const tag of tagGroup) {
-          const tagId = String(tag.id).toLowerCase()
-          if (replayGainTrack === null && tagId === 'replaygain_track_gain') {
-            replayGainTrack = parseReplayGainDb(tag.value)
-          }
-          if (replayGainAlbum === null && tagId === 'replaygain_album_gain') {
-            replayGainAlbum = parseReplayGainDb(tag.value)
-          }
-        }
-      }
-    }
 
     // Album artist fallback: albumartist → artist → 'Unknown Artist'
     albumArtist = metadata.common.albumartist || metadata.common.artist || 'Unknown Artist'
@@ -129,20 +110,8 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     bitrate,
     codec,
     lossless,
-    replayGainTrack,
-    replayGainAlbum,
   }
 }
-
-function parseReplayGainDb(value: unknown): number | null {
-  const raw = Array.isArray(value) ? value[0] : value
-  if (typeof raw !== 'string' && typeof raw !== 'number') return null
-  const match = String(raw).match(/[-+]?\d+(?:\.\d+)?\s*dB/i)
-  if (!match) return null
-  const gain = Number.parseFloat(match[0])
-  return Number.isFinite(gain) && gain >= -60 && gain <= 60 ? gain : null
-}
-
 export function revokeTrackUrls(track: Track): void {
   URL.revokeObjectURL(track.url)
   if (track.cover) {

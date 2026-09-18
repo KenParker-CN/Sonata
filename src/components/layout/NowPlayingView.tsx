@@ -3,16 +3,29 @@ import {useEffect, useRef, useState} from 'react'
 import type {Track} from '@/types/music'
 import {motion} from 'motion/react'
 import {Link} from 'react-router-dom'
+import {X, Settings} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {parseArtists} from '@/utils/parseArtists'
 import {artistPath, trackPath} from '@/utils/routes'
 import GeneratedArt from '@/components/media/GeneratedArt'
+import {BackgroundRender} from '@applemusic-like-lyrics/react'
 
+// Lyrics reach into AMLL for both the format parsers and the renderer — a few
+// hundred kilobytes that belong to Now Playing, not to the app shell, so the
+// column arrives after the overlay does and shows the same box while it loads.
 interface NowPlayingViewProps {
     track: Track | null
     isPlaying: boolean
     audioElementRef: RefObject<HTMLAudioElement | null>
     onClose: () => void
+}
+
+interface BackgroundSettings {
+    fps: number
+    renderScale: number
+    flowSpeed: number
+    staticMode: boolean
+    lowFreqVolume: number
 }
 
 function ArtworkDisplay({track, className}: { track: Track | null; className?: string }) {
@@ -64,36 +77,54 @@ function TrackInfo({track, onNavigate}: { track: Track | null; onNavigate: () =>
     )
 }
 
-function MetadataPanel({track}: { track: Track | null }) {
+function MetadataSection({track}: { track: Track | null }) {
     const fields = track ? [
-        ['Composer', track.composer],
-        ['Release', track.releaseDate],
+        ['Released on', track.releaseDate],
+
+        ['Format', track.codec],
         ['Bit depth', track.bitDepth != null ? `${track.bitDepth}-bit` : undefined],
         ['Sample rate', track.sampleRate ? `${track.sampleRate} Hz` : undefined],
-
+        ['Bitrate', track.bitrate ? `${(track.bitrate)} kbps` : undefined],
     ].filter(([, value]) => value) : []
 
+    if (fields.length === 0) return null
+
     return (
-        <section className="mt-2 rounded-2xl bg-player-border/30 p-5 text-left">
-            {fields.length > 0 ? (
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
-                    {fields.map(([label, value]) => (
-                        <div key={label} className="min-w-0">
-                            <dt className="text-[11px] uppercase tracking-wider text-player-muted">{label}</dt>
-                            <dd className="mt-1 truncate text-sm text-player-foreground">{value}</dd>
-                        </div>
-                    ))}
-                </dl>
-            ) : (
-                <div
-                    className="rounded-xl border border-dashed border-player-border px-4 py-6 text-sm leading-6 text-player-muted">
-                    Rich recording details will appear here when they are available in your local tags.
-                </div>
-            )}
+        <section className="space-y-3">
+            <h3 className="text-[11px] font-medium uppercase tracking-[0.18em] text-player-muted">Metadata</h3>
+            <dl className="space-y-2">
+                {fields.map(([label, value]) => (
+                    <div key={label} className="flex justify-between gap-4">
+                        <dt className="text-xs text-player-muted shrink-0">{label}</dt>
+                        <dd className="text-sm text-player-foreground truncate text-right">{value}</dd>
+                    </div>
+                ))}
+            </dl>
         </section>
     )
 }
 
+function PersonnelSection({track}: { track: Track | null }) {
+    // Placeholder for future personnel data
+    const fields = track ? [
+        ['Composer', track.composer],
+    ].filter(([, value]) => value) : []
+
+    if (fields.length === 0) return null
+    // This section will only show when personnel data is available
+    return null
+}
+
+function CreditsSection({track}: { track: Track | null }) {
+    // Placeholder for future credits data
+    const fields = track ? [
+        ['Copyright', track.copyright],
+    ].filter(([, value]) => value) : []
+
+    if (fields.length === 0) return null
+    // This section will only show when credits data is available
+    return null
+}
 type AudioGraph = { context: AudioContext; analyser: AnalyserNode }
 const audioGraphs = new WeakMap<HTMLAudioElement, AudioGraph>()
 
@@ -150,8 +181,7 @@ function BandVisualizer({band, startRatio, endRatio, color, analyser, isPlayingR
             const end = Math.max(start + 1, Math.floor(values.length * endRatio))
             const bandValues = values.slice(start, end)
             const barWidth = width / bandValues.length
-            const accentColor = getComputedStyle(canvas).getPropertyValue('--player-accent').trim() || color
-            canvasContext.fillStyle = accentColor
+            canvasContext.fillStyle = getComputedStyle(canvas).getPropertyValue('--player-accent').trim() || color
             bandValues.forEach((value, index) => {
                 const level = isPlayingRef.current ? value / 255 : 0.035
                 const barHeight = Math.max(3, level * height * 0.82)
@@ -197,23 +227,127 @@ function VisualizerPanel({track, isPlaying, audioElementRef}: { track: Track | n
     }, [audioElementRef])
 
     return (
-        <section className={cn('ambient-visualizer relative flex min-h-0 w-full flex-col justify-end overflow-hidden rounded-2xl border border-player-border/60 p-4', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
-            <div className="ambient-visualizer-wash" aria-hidden="true" />
-            <div className="ambient-visualizer-blob ambient-visualizer-blob-one" aria-hidden="true" />
-            <div className="ambient-visualizer-blob ambient-visualizer-blob-two" aria-hidden="true" />
-            <div className="ambient-visualizer-blob ambient-visualizer-blob-three" aria-hidden="true" />
+        <section className={cn('ambient-visualizer relative flex min-h-0 w-full flex-col justify-end overflow-hidden rounded-xl border border-player-border/60 p-4', isPlaying && 'is-playing')} style={artworkStyle} aria-label="Music visualizer">
             <div className="relative z-10 w-full">
                 {graph ? (
                     <BandVisualizer band="Visualizer" startRatio={0} endRatio={1} color="rgba(249, 115, 178, 0.9)" analyser={graph.analyser} isPlayingRef={isPlayingRef} />
                 ) : (
-                    <div className="frequency-band h-32 rounded-xl border border-player-border/50 bg-player/20" />
+                    <div className="frequency-band h-20 rounded-lg border border-player-border/50 bg-player/20" />
                 )}
             </div>
         </section>
     )
 }
 
+function BackgroundSettingsPanel({settings, onChange, onClose}: {
+    settings: BackgroundSettings
+    onChange: (settings: BackgroundSettings) => void
+    onClose: () => void
+}) {
+    return (
+        <div className="absolute right-4 top-4 z-40 w-80 rounded-xl border border-player-border/60 bg-player/95 backdrop-blur-sm p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-player-foreground">Background Settings</h3>
+                <button
+                    onClick={onClose}
+                    className="text-player-muted hover:text-player-foreground"
+                    aria-label="Close settings"
+                >
+                    <X size={18} />
+                </button>
+            </div>
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <label className="flex justify-between text-xs text-player-muted">
+                        <span>FPS</span>
+                        <span>{settings.fps}</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="15"
+                        max="60"
+                        step="5"
+                        value={settings.fps}
+                        onChange={(e) => onChange({...settings, fps: Number(e.target.value)})}
+                        className="w-full h-1 bg-player-border rounded-lg appearance-none cursor-pointer"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="flex justify-between text-xs text-player-muted">
+                        <span>Render Scale</span>
+                        <span>{settings.renderScale}</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="0.3"
+                        max="1"
+                        step="0.1"
+                        value={settings.renderScale}
+                        onChange={(e) => onChange({...settings, renderScale: Number(e.target.value)})}
+                        className="w-full h-1 bg-player-border rounded-lg appearance-none cursor-pointer"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="flex justify-between text-xs text-player-muted">
+                        <span>Flow Speed</span>
+                        <span>{settings.flowSpeed}</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="0.1"
+                        max="1"
+                        step="0.1"
+                        value={settings.flowSpeed}
+                        onChange={(e) => onChange({...settings, flowSpeed: Number(e.target.value)})}
+                        className="w-full h-1 bg-player-border rounded-lg appearance-none cursor-pointer"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="flex justify-between text-xs text-player-muted">
+                        <span>Low Freq Volume</span>
+                        <span>{settings.lowFreqVolume}</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="0.5"
+                        max="2"
+                        step="0.1"
+                        value={settings.lowFreqVolume}
+                        onChange={(e) => onChange({...settings, lowFreqVolume: Number(e.target.value)})}
+                        className="w-full h-1 bg-player-border rounded-lg appearance-none cursor-pointer"
+                    />
+                </div>
+                <div className="flex items-center justify-between">
+                    <label className="text-xs text-player-muted">Static Mode</label>
+                    <button
+                        onClick={() => onChange({...settings, staticMode: !settings.staticMode})}
+                        className={cn(
+                            'relative h-5 w-9 rounded-full transition-colors',
+                            settings.staticMode ? 'bg-player-accent' : 'bg-player-border'
+                        )}
+                    >
+                        <span
+                            className={cn(
+                                'absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform',
+                                settings.staticMode ? 'translate-x-4' : 'translate-x-0.5'
+                            )}
+                        />
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 export default function NowPlayingView({track, isPlaying, audioElementRef, onClose}: NowPlayingViewProps) {
+    const [showSettings, setShowSettings] = useState(false)
+    const [bgSettings, setBgSettings] = useState<BackgroundSettings>({
+        fps: 30,
+        renderScale: 0.5,
+        flowSpeed: 0.2,
+        staticMode: false,
+        lowFreqVolume: 1
+    })
     return (
         <motion.section
             initial={{opacity: 0, y: 24}}
@@ -231,26 +365,58 @@ export default function NowPlayingView({track, isPlaying, audioElementRef, onClo
             className="absolute inset-x-0 bottom-(--player-height) top-0 z-30 flex min-h-0 flex-col overflow-y-auto bg-player text-player-foreground"
             aria-label="Now Playing"
         >
-            <div className={cn('now-playing-fluid pointer-events-none absolute inset-0', isPlaying && 'is-playing')} aria-hidden="true">
-                <span className="now-playing-fluid-orb now-playing-fluid-orb-one" />
-                <span className="now-playing-fluid-orb now-playing-fluid-orb-two" />
-                <span className="now-playing-fluid-orb now-playing-fluid-orb-three" />
+            <div className="absolute inset-0 -z-10" aria-hidden="true">
+                <BackgroundRender
+                    album={track?.cover ?? undefined}
+                    playing={isPlaying}
+                    fps={bgSettings.fps}
+                    renderScale={bgSettings.renderScale}
+                    flowSpeed={bgSettings.flowSpeed}
+                    staticMode={bgSettings.staticMode}
+                    lowFreqVolume={bgSettings.lowFreqVolume}
+                />
             </div>
-            <div className="relative mx-auto flex min-h-full w-full max-w-7xl flex-1 flex-col px-5 pb-8 pt-5">
-                <div className="flex min-h-0 flex-1 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
-                    {/* Left column: cover and one full-spectrum visualizer */}
-                    <div className="flex min-w-0 flex-1 max-w-2xl flex-col items-center gap-3">
-                        <ArtworkDisplay track={track} className="w-[min(72vw,380px)]"/>
-                        <div className="w-[min(72vw,380px)]">
-                            <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
+            {showSettings && (
+                <BackgroundSettingsPanel
+                    settings={bgSettings}
+                    onChange={setBgSettings}
+                    onClose={() => setShowSettings(false)}
+                />
+            )}
+            <div className="relative mx-auto flex min-h-full w-full max-w-6xl flex-1 flex-col px-5 pb-8 pt-5">
+                <div className="absolute right-4 top-4 flex gap-2">
+                    <button
+                        className="text-player-foreground/50 hover:text-player-foreground"
+                        onClick={() => setShowSettings(!showSettings)}
+                        aria-label="Background settings"
+                    >
+                        <Settings size={24} />
+                    </button>
+                    <button
+                        className="text-player-foreground/50 hover:text-player-foreground lg:hidden"
+                        onClick={onClose}
+                        aria-label="Close Now Playing"
+                    >
+                        <X size={24} />
+                    </button>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col gap-8 lg:flex-row lg:items-center lg:gap-16">
+                    {/* Left column: cover and track info */}
+                    <div className="flex min-w-0 flex-1 flex-col items-center gap-6 lg:items-start lg:max-w-md">
+                        <ArtworkDisplay track={track} className="w-full max-w-95"/>
+                        <div className="w-full max-w-95">
+                            <TrackInfo track={track} onNavigate={onClose}/>
                         </div>
                     </div>
 
-                    {/* Right column: track details and tag details */}
-                    <aside
-                        className="flex min-w-0 w-full shrink-0 flex-col justify-start lg:h-full lg:min-h-0 lg:w-140">
-                        <TrackInfo track={track} onNavigate={onClose}/>
-                        <MetadataPanel track={track}/>
+                    {/* Right column: visualizer and metadata sections */}
+                    <aside className="float-right flex min-w-0 w-full shrink-0 flex-col gap-6 lg:max-w-md">
+                        <VisualizerPanel track={track} isPlaying={isPlaying} audioElementRef={audioElementRef}/>
+                        <div className="space-y-6">
+                            <MetadataSection track={track}/>
+                            <PersonnelSection track={track}/>
+                            <CreditsSection track={track}/>
+                        </div>
                     </aside>
                 </div>
             </div>
