@@ -44,6 +44,20 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
     replayGainTrack = parseReplayGainDb(commonTags.replaygain_track_gain)
     replayGainAlbum = parseReplayGainDb(commonTags.replaygain_album_gain)
 
+    if (replayGainTrack === null || replayGainAlbum === null) {
+      for (const tagGroup of Object.values(metadata.native)) {
+        for (const tag of tagGroup) {
+          const tagId = String(tag.id).toLowerCase()
+          if (replayGainTrack === null && tagId === 'replaygain_track_gain') {
+            replayGainTrack = parseReplayGainDb(tag.value)
+          }
+          if (replayGainAlbum === null && tagId === 'replaygain_album_gain') {
+            replayGainAlbum = parseReplayGainDb(tag.value)
+          }
+        }
+      }
+    }
+
     // Album artist fallback: albumartist → artist → 'Unknown Artist'
     albumArtist = metadata.common.albumartist || metadata.common.artist || 'Unknown Artist'
 
@@ -123,10 +137,10 @@ export async function parseTrackFile(file: File, path: string): Promise<Track> {
 function parseReplayGainDb(value: unknown): number | null {
   const raw = Array.isArray(value) ? value[0] : value
   if (typeof raw !== 'string' && typeof raw !== 'number') return null
-  const match = String(raw).match(/[-+]?\d+(?:\.\d+)?/)
+  const match = String(raw).match(/[-+]?\d+(?:\.\d+)?\s*dB/i)
   if (!match) return null
-  const gain = Number(match[0])
-  return Number.isFinite(gain) ? gain : null
+  const gain = Number.parseFloat(match[0])
+  return Number.isFinite(gain) && gain >= -60 && gain <= 60 ? gain : null
 }
 
 export function revokeTrackUrls(track: Track): void {
